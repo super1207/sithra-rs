@@ -1,0 +1,25 @@
+[package]
+name = "sithra"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+
+# Workspace member crates
+
+sithra_common.workspace = true
+
+# Extrenal crates
+
+tokio.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+ioevent.workspace = true
+rand = "0.9.1"
+log = "0.4.27"
+tracing-subscriber = "0.3.19"
+tokio-tungstenite = "0.26.2"
+futures-util = "0.3.31"
+dashmap = "6.1.0"
+anyhow = "1.0.98"
+toml = "0.8.20"

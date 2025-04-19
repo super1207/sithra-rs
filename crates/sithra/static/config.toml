@@ -1,0 +1,2 @@
+[base]
+ws-url = "ws://localhost:8084" # 请修改为你的 onebot 服务器的 WebSocket 地址
