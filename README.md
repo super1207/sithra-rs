@@ -37,7 +37,7 @@ sithra_common = { git = "https://github.com/SithraBot/sithra-rs.git" }
 
 `sithra-rs` 的一切都离不开 [`ioevent`](https://github.com/BERADQ/ioevent)。
 
-对于一些基本的知识，请先参阅 [`ioevent` doc](https://docs.rs/ioevent/latest/ioevent/)。
+对于插件开发的一些基本知识，请参阅 [`ioevent` doc](https://docs.rs/ioevent/latest/ioevent/)。
 
 [待补充]
 
