@@ -37,6 +37,18 @@ pub use api_receiver::*;
 pub use api_sender::*;
 pub use msg_receiver::*;
 
+#[derive(Clone)]
+pub struct ClientState {
+    pub api_sender: mpsc::UnboundedSender<ApiRequest>,
+    pub api_shooters: Arc<DashMap<String, oneshot::Sender<Result<ApiResponse, ApiError>>>>,
+    pub pcw: DefaultProcedureWright,
+}
+impl ProcedureCallWright for ClientState {
+    fn next_echo(&self) -> impl Future<Output = u64> + Send {
+        self.pcw.next_echo()
+    }
+}
+
 macro_rules! ignore_none {
     ($expr:expr) => {
         match $expr {
@@ -73,17 +85,6 @@ macro_rules! ignore_err_out {
 pub const ECHO_GENERATOR: LazyLock<Mutex<SmallRng>> =
     LazyLock::new(|| Mutex::new(SmallRng::from_os_rng()));
 
-#[derive(Clone)]
-pub struct ClientState {
-    pub api_sender: mpsc::UnboundedSender<ApiRequest>,
-    pub api_shooters: Arc<DashMap<String, oneshot::Sender<Result<ApiResponse, ApiError>>>>,
-    pub pcw: DefaultProcedureWright,
-}
-impl ProcedureCallWright for ClientState {
-    fn next_echo(&self) -> impl Future<Output = u64> + Send {
-        self.pcw.next_echo()
-    }
-}
 mod msg_receiver {
     use super::*;
     pub struct MsgReceiver {
@@ -93,8 +94,14 @@ mod msg_receiver {
 
     pub async fn tick_msg_receiver(msg_receiver: &mut MsgReceiver) {
         let message = msg_receiver.stream.next().await;
-        let message = ignore_none!(message);
+        let message = if let Some(message) = message {
+            message
+        } else {
+            return;
+        };
+        let message = message;
         let message = ignore_err!(message);
+        log::debug!("收到消息: {:?}", message);
         if message.is_ping() {
             msg_receiver.stream.send(Message::Pong(message.into_data()));
             return;
@@ -111,19 +118,19 @@ mod msg_receiver {
                 error!("消息解析错误: {:?}", error);
             }
         }
-        ignore_err_out!(msg_receiver.state.bus.emit(&event));
+        ignore_err_out!(msg_receiver.state.wright.emit(&event));
         match event.kind {
             event::EventKind::Message(message_detail) => {
-                ignore_err_out!(msg_receiver.state.bus.emit(&message_detail));
+                ignore_err_out!(msg_receiver.state.wright.emit(&message_detail));
             }
             event::EventKind::Notice(notice_detail) => {
-                ignore_err_out!(msg_receiver.state.bus.emit(&notice_detail));
+                ignore_err_out!(msg_receiver.state.wright.emit(&notice_detail));
             }
             event::EventKind::Request(request_detail) => {
-                ignore_err_out!(msg_receiver.state.bus.emit(&request_detail));
+                ignore_err_out!(msg_receiver.state.wright.emit(&request_detail));
             }
             event::EventKind::Meta(meta_detail) => {
-                ignore_err_out!(msg_receiver.state.bus.emit(&meta_detail));
+                ignore_err_out!(msg_receiver.state.wright.emit(&meta_detail));
             }
             event::EventKind::Unknown(value) => {
                 error!("未知事件: {:?}", value);
@@ -143,7 +150,8 @@ mod api_sender {
     pub async fn tick_api_sender(ws_state: &mut ApiSenderWsState) {
         let api_request = ignore_none!(ws_state.api_receiver.recv().await);
         let api_request = ignore_err!(serde_json::to_string(&api_request));
-        ignore_err!(
+        log::debug!("发送 onebot 请求: {:?}", api_request);
+        ignore_err_out!(
             ws_state
                 .ws_sender
                 .send(Message::Text(api_request.into()))
@@ -154,7 +162,7 @@ mod api_sender {
 
 mod api_receiver {
     use futures_util::future::err;
-    use log::debug;
+    use log::{debug, info};
     use sithra_common::api::internal::OnlyEcho;
 
     use super::*;

@@ -7,3 +7,4 @@ edition.workspace = true
 ioevent.workspace = true
 tokio.workspace = true
 sithra_common.workspace = true
+log.workspace = true

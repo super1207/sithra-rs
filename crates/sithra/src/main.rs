@@ -9,12 +9,11 @@ use client::*;
 use config::Config;
 use ioevent::prelude::*;
 use log::*;
-use subscribers::API_PROCEDURES;
-use tokio::{fs, process::Command, select, signal};
+use subscribers::SUBSCRIBERS;
+use tokio::{fs, process::Command, select};
+use tokio_util::sync::CancellationToken;
 use tracing_subscriber::prelude::*;
 use util::join_url;
-
-const SUBSCRIBERS: &[Subscriber<ClientState>] = API_PROCEDURES;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -22,9 +21,9 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    log::set_max_level(log::LevelFilter::Debug);
-
     let config = Config::init().await?;
+
+    log::set_max_level(config.base.log_level.into());
 
     let subscribers = Subscribers::init(SUBSCRIBERS);
     let mut builder = BusBuilder::new(subscribers);
@@ -39,15 +38,11 @@ async fn main() -> anyhow::Result<()> {
             let child = Command::new(&path);
             let io: IoPair<_, _> = child.try_into()?;
             builder.add_pair(io);
-            info!("成功加载插件: {:?}", path.file_name().unwrap().to_str());
+            info!(target: "plugin_loader", "成功加载插件: {:?}", path.file_name().unwrap().to_str());
         }
     }
 
-    let Bus {
-        mut subscribe_ticker,
-        mut effect_ticker,
-        effect_wright,
-    } = builder.build();
+    let (bus, wright) = builder.build();
     let App {
         state,
         mut msg_receiver,
@@ -56,50 +51,53 @@ async fn main() -> anyhow::Result<()> {
     } = App::new(
         &join_url(&config.base.ws_url, "event/"),
         &join_url(&config.base.ws_url, "api/"),
-        effect_wright,
+        wright,
     )
     .await?;
 
     log::info!("成功连接到 WebSocket 服务器");
+    
+    let cancel_token = CancellationToken::new();
 
-    let state_clone = state.clone();
-    let handle = tokio::spawn(async move {
+    let cancel_token_clone = cancel_token.clone();
+    let msg_receiver_handle = tokio::spawn(async move {
         loop {
-            select! {
-            _ = tick_msg_receiver(&mut msg_receiver) => {}
-            _ = tick_api_sender(&mut api_sender) => {}
-            _ = tick_api_receiver(&state_clone, &mut api_receiver) => {}
+            if cancel_token_clone.is_cancelled() {
+                break;
             }
+            tick_msg_receiver(&mut msg_receiver).await;
         }
     });
+    let cancel_token_clone = cancel_token.clone();
+    let api_sender_handle = tokio::spawn(async move {
+        loop {
+            if cancel_token_clone.is_cancelled() {
+                break;
+            }
+            tick_api_sender(&mut api_sender).await;
+        }
+    });
+    let state_clone = state.clone();
+    let bus_handle = bus
+        .run(state, &|e| {
+            error!("总线错误: {:?}", e);
+        })
+        .await;
+    let (join_handle, close_handle) = bus_handle.spawn();
 
     loop {
         select! {
-            err = subscribe_ticker.tick(&state) => {
-                match err {
-                    Ok(e) => {
-                        for err in e {
-                            error!("订阅者错误: {:?}", err);
-                        }
-                    }
-                    Err(e) => {
-                        error!("总线错误: {:?}", e);
-                    }
-                }
-            }
-            errs = effect_ticker.tick() => {
-                for err in errs {
-                    error!("副作用总线错误: {:?}", err);
-                }
-            }
-            _ = signal::ctrl_c() => {
+            _ = tick_api_receiver(&state_clone, &mut api_receiver) => {}
+            _ = tokio::signal::ctrl_c() => {
                 log::info!("正在关闭...");
+                cancel_token.cancel();
+                msg_receiver_handle.abort();
+                api_sender_handle.abort();
+                close_handle.close();
                 break;
             }
         }
     }
-
-    handle.abort();
-
+    join_handle.await.unwrap();
     Ok(())
 }

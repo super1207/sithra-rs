@@ -25,9 +25,10 @@ impl EffectLoopArgs {
 }
 
 #[proc_macro_attribute]
-pub fn main_loop(args: TokenStream, input: TokenStream) -> TokenStream {
+pub fn main(args: TokenStream, input: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(input as syn::ItemFn);
-    let fn_name = input.sig.ident.clone();
+    let mut output = input.clone();
+    output.sig.ident = proc_macro2::Ident::new("_main", input.sig.ident.span());
 
     let mut attrs = EffectLoopArgs::default();
     let parser = syn::meta::parser(|meta| attrs.parse(meta));
@@ -38,31 +39,27 @@ pub fn main_loop(args: TokenStream, input: TokenStream) -> TokenStream {
 
     quote! {
         #[allow(unreachable_code)]
-        #[tokio::main]
+        #[::tokio::main]
         async fn main() {
             let subscribes = ::ioevent::Subscribers::init(#subscribers);
             let mut builder = ::ioevent::BusBuilder::new(subscribes);
             builder.add_pair(::ioevent::IoPair::stdio());
-            let ::ioevent::Bus {
-                mut subscribe_ticker,
-                mut effect_ticker,
-                effect_wright,
-            } = builder.build();
-            let state = ::ioevent::State::new(#state, effect_wright.clone());
-            let handle = ::tokio::spawn(async move {
-                loop {
-                    #fn_name(&effect_wright).await;
-                }
+            let (bus, wright) = builder.build();
+            ::sithra_common::log::init_log(wright.clone(), ::log::LevelFilter::Info);
+            let state = ::ioevent::State::new(#state, wright.clone());
+
+            let handle_bus = bus.run(state, &|e| {
+                ::log::error!("总线错误: {:?}", e);
+            }).await;
+
+            let handle_main_loop = tokio::spawn(async move {
+                _main(&wright).await;
             });
-            loop {
-                ::tokio::select! {
-                    _ = subscribe_ticker.tick(&state) => {},
-                    _ = effect_ticker.tick() => {},
-                }
-            }
-            handle.abort();
+
+            handle_bus.join().await;
         }
-        #input
+        #[doc(hidden)]
+        #output
     }
     .into()
 }

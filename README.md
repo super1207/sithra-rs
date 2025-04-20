@@ -1,6 +1,6 @@
-# `sithra-rs`
+# **`sithra-rs`**
 
-`sithra-rs` 是一个基于 Rust 实现的 OneBot 聊天机器人框架，专注于提供高性能和可扩展的机器人开发体验。
+**`sithra-rs`** 是一个基于 Rust 实现的 OneBot 聊天机器人框架，专注于提供高性能和可扩展的机器人开发体验。
 
 ## 项目结构
 
@@ -52,3 +52,7 @@ sithra_common = { git = "https://github.com/SithraBot/sithra-rs.git" }
 ## 社区
 
 - [QQ 群](https://qm.qq.com/q/XtORRK5Ruk)
+
+## 发音
+
+`/siːθrə/`

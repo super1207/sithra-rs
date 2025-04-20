@@ -2,6 +2,7 @@ use std::env;
 
 use log::info;
 use serde::Deserialize;
+use sithra_common::log::LogLevel;
 use tokio::{
     fs,
     io::{self, AsyncReadExt},
@@ -18,6 +19,8 @@ pub struct Config {
 pub struct BaseConfig {
     #[serde(rename = "ws-url")]
     pub ws_url: String,
+    #[serde(rename = "log-level")]
+    pub log_level: LogLevel,
 }
 
 impl Config {

@@ -1,5 +1,6 @@
 pub mod api;
 pub mod event;
+pub mod log;
 pub mod message;
 pub mod traits;
 pub use sithra_macro::*;

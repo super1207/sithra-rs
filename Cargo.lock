@@ -222,6 +222,7 @@ name = "echo"
 version = "0.1.0"
 dependencies = [
  "ioevent",
+ "log",
  "sithra_common",
  "tokio",
 ]
@@ -407,7 +408,7 @@ dependencies = [
 [[package]]
 name = "ioevent"
 version = "0.1.0-rc.2"
-source = "git+https://github.com/BERADQ/ioevent.git#3ffb77c19c2129129a41582bd0d3ed4129395410"
+source = "git+https://github.com/BERADQ/ioevent.git#314e1a88e6e89d8f1020af61f91c047700ca27ef"
 dependencies = [
  "channels",
  "ciborium",
@@ -419,12 +420,13 @@ dependencies = [
  "serde",
  "thiserror",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]
 name = "ioevent_macro"
 version = "0.1.0-rc.2"
-source = "git+https://github.com/BERADQ/ioevent.git#3ffb77c19c2129129a41582bd0d3ed4129395410"
+source = "git+https://github.com/BERADQ/ioevent.git#314e1a88e6e89d8f1020af61f91c047700ca27ef"
 dependencies = [
  "quote",
  "syn",
@@ -728,9 +730,9 @@ dependencies = [
 
 [[package]]
 name = "signal-hook-registry"
-version = "1.4.2"
+version = "1.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9e9e0b4211b72e7b8b6e85c807d36c212bdb33ea8587f7569562a84df5465b1"
+checksum = "9203b8055f63a2a00e2f593bb0510367fe707d7ff1e5c872de2f537b339e5410"
 dependencies = [
  "libc",
 ]
@@ -750,6 +752,7 @@ dependencies = [
  "sithra_common",
  "tokio",
  "tokio-tungstenite",
+ "tokio-util",
  "toml",
  "tracing-subscriber",
 ]
@@ -759,16 +762,19 @@ name = "sithra_common"
 version = "0.1.0"
 dependencies = [
  "ioevent",
+ "log",
  "serde",
  "serde_json",
  "sithra_macro",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]
 name = "sithra_macro"
 version = "0.1.0"
 dependencies = [
+ "proc-macro2",
  "quote",
  "syn",
 ]
@@ -878,6 +884,19 @@ dependencies = [
  "log",
  "tokio",
  "tungstenite",
+]
+
+[[package]]
+name = "tokio-util"
+version = "0.7.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b9590b93e6fcc1739458317cccd391ad3955e2bde8913edf6f95f9e65a8f034"
+dependencies = [
+ "bytes",
+ "futures-core",
+ "futures-sink",
+ "pin-project-lite",
+ "tokio",
 ]
 
 [[package]]

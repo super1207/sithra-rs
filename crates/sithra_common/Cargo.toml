@@ -11,4 +11,6 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 ioevent.workspace = true
+tokio.workspace = true
 sithra_macro.workspace = true
+log.workspace = true
