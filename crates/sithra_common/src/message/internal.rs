@@ -85,8 +85,8 @@ impl From<MessageNode> for InternalMessage {
             MessageNode::Image(url) => InternalMessage::Image(MediaData { file: url }),
             MessageNode::Record(url) => InternalMessage::Record(MediaData { file: url }),
             MessageNode::At(qq) => InternalMessage::At(AtData {
-                qq: Some(qq.0.clone()),
-                id: Some(qq.0),
+                qq: Some(qq.0.to_string()),
+                id: Some(qq.0.to_string()),
             }),
             MessageNode::Poke => InternalMessage::Poke(PokeData {
                 poke_type: "poke".to_string(),
@@ -96,18 +96,20 @@ impl From<MessageNode> for InternalMessage {
             MessageNode::Contact(contact_type) => InternalMessage::Contact(match contact_type {
                 ConversationContact::Group(id) => ContactData {
                     contact_type: ContactType::Group,
-                    id: id.0,
+                    id: id.0.to_string(),
                 },
                 ConversationContact::Private(id) => ContactData {
                     contact_type: ContactType::QQ,
-                    id: id.0,
+                    id: id.0.to_string(),
                 },
             }),
             MessageNode::Location(lat, lon) => InternalMessage::Location(LocationData {
                 lat: lat.to_string(),
                 lon: lon.to_string(),
             }),
-            MessageNode::Reply(id) => InternalMessage::Reply(ReplyData { id: id.0 }),
+            MessageNode::Reply(id) => InternalMessage::Reply(ReplyData {
+                id: id.0.to_string(),
+            }),
             MessageNode::Unknown(data) => InternalMessage::Unknown(data),
         }
     }

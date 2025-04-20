@@ -56,4 +56,5 @@ pub mod prelude {
     pub use crate::traits::*;
     pub use crate::api::*;
     pub use crate::state::*;
+    pub use sithra_macro::*;
 }

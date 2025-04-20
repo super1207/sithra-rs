@@ -535,10 +535,7 @@ pub mod request {
         pub fn new(user_id: UserID, message: Vec<MessageNode>) -> Result<Self, ApiError> {
             let message = message.into_iter().map(|x| x.into()).collect();
             Ok(Self {
-                user_id: user_id
-                    .0
-                    .parse()
-                    .map_err(|e: ParseIntError| ApiError::ResponseParseFailed(e.to_string()))?,
+                user_id: user_id.into(),
                 message,
                 auto_escape: false,
             })
@@ -564,10 +561,7 @@ pub mod request {
         pub fn new(group_id: GroupID, message: Vec<MessageNode>) -> Result<Self, ApiError> {
             let message = message.into_iter().map(|x| x.into()).collect();
             Ok(Self {
-                group_id: group_id
-                    .0
-                    .parse()
-                    .map_err(|e: ParseIntError| ApiError::ResponseParseFailed(e.to_string()))?,
+                group_id: group_id.into(),
                 message,
                 auto_escape: false,
             })
@@ -637,8 +631,8 @@ pub mod request {
             reject_add_request: bool,
         ) -> Result<Self, ParseIntError> {
             Ok(Self {
-                group_id: group_id.0.parse()?,
-                user_id: user_id.0.parse()?,
+                group_id: group_id.into(),
+                user_id: user_id.into(),
                 reject_add_request,
             })
         }
@@ -667,8 +661,8 @@ pub mod request {
             duration: i32,
         ) -> Result<Self, ParseIntError> {
             Ok(Self {
-                group_id: group_id.0.parse()?,
-                user_id: user_id.0.parse()?,
+                group_id: group_id.into(),
+                user_id: user_id.into(),
                 duration,
             })
         }
@@ -697,8 +691,8 @@ pub mod request {
             enable: bool,
         ) -> Result<Self, ParseIntError> {
             Ok(Self {
-                group_id: group_id.0.parse()?,
-                user_id: user_id.0.parse()?,
+                group_id: group_id.into(),
+                user_id: user_id.into(),
                 enable,
             })
         }
@@ -727,8 +721,8 @@ pub mod request {
             card: String,
         ) -> Result<Self, ParseIntError> {
             Ok(Self {
-                group_id: group_id.0.parse()?,
-                user_id: user_id.0.parse()?,
+                group_id: group_id.into(),
+                user_id: user_id.into(),
                 card,
             })
         }
@@ -751,7 +745,7 @@ pub mod request {
         /// - `is_dismiss`: 是否解散群
         pub fn new(group_id: GroupID, is_dismiss: bool) -> Result<Self, ParseIntError> {
             Ok(Self {
-                group_id: group_id.0.parse()?,
+                group_id: group_id.into(),
                 is_dismiss,
             })
         }
@@ -832,11 +826,11 @@ pub mod request {
         /// # 参数
         /// - `user_id`: 目标QQ号
         /// - `no_cache`: 是否不使用缓存
-        pub fn new(user_id: UserID, no_cache: bool) -> Result<Self, ParseIntError> {
-            Ok(Self {
-                user_id: user_id.0.parse()?,
+        pub fn new(user_id: u64, no_cache: bool) -> Self {
+            Self {
+                user_id: user_id as i64,
                 no_cache,
-            })
+            }
         }
     }
 
@@ -857,7 +851,7 @@ pub mod request {
         /// - `no_cache`: 是否不使用缓存
         pub fn new(group_id: GroupID, no_cache: bool) -> Result<Self, ParseIntError> {
             Ok(Self {
-                group_id: group_id.0.parse()?,
+                group_id: group_id.into(),
                 no_cache,
             })
         }
@@ -886,8 +880,8 @@ pub mod request {
             no_cache: bool,
         ) -> Result<Self, ParseIntError> {
             Ok(Self {
-                group_id: group_id.0.parse()?,
-                user_id: user_id.0.parse()?,
+                group_id: group_id.into(),
+                user_id: user_id.into(),
                 no_cache,
             })
         }
@@ -908,7 +902,7 @@ pub mod request {
         /// - `group_id`: 目标群号
         pub fn new(group_id: GroupID) -> Result<Self, ParseIntError> {
             Ok(Self {
-                group_id: group_id.0.parse()?,
+                group_id: group_id.into(),
             })
         }
     }

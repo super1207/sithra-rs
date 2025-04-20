@@ -224,15 +224,63 @@ impl From<internal::InternalMessageEvent> for (MessageEvent, Vec<&'static str>) 
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UniUser {
+    pub user_id: u64,
+    pub nickname: Option<String>,
+    pub card: Option<String>,
+    pub sex: Sex,
+    pub age: Option<i32>,
+}
+
+impl UniUser {
+    /// 获取用户名，优先级：群名片 > 昵称 > 用户ID
+    pub fn call_name(&self) -> String {
+        match &self.card {
+            Some(card) if !card.is_empty() => card.clone(),
+            _ => match &self.nickname {
+                Some(nickname) if !nickname.is_empty() => nickname.clone(),
+                _ => self.user_id.to_string(),
+            },
+        }
+    }
+}
+
+impl From<GroupSender> for UniUser {
+    fn from(value: GroupSender) -> Self {
+        Self {
+            user_id: value.user_id,
+            nickname: value.nickname,
+            sex: value.sex,
+            age: value.age,
+            card: value.card,
+        }
+    }
+}
+
+impl From<PrivateSender> for UniUser {
+    fn from(value: PrivateSender) -> Self {
+        Self {
+            user_id: value.user_id,
+            nickname: value.nickname,
+            sex: value.sex,
+            age: value.age,
+            card: None,
+        }
+    }
+}
+
 /// 消息事件的扁平化结构
 #[derive(Debug, Serialize, Deserialize)]
-pub struct MessageDetailFlatten {
+pub struct MessageEventFlattened {
     /// 消息内容
     pub message: Vec<MessageNode>,
     /// 消息来源
     pub contact: ConversationContact,
+    /// 消息来源
+    pub sender: UniUser,
 }
-impl MessageDetailFlatten {
+impl MessageEventFlattened {
     pub async fn reply<T>(
         &self,
         state: &ioevent::State<T>,
@@ -251,7 +299,7 @@ impl MessageDetailFlatten {
         }
     }
 }
-impl Deref for MessageDetailFlatten {
+impl Deref for MessageEventFlattened {
     type Target = Vec<MessageNode>;
 
     fn deref(&self) -> &Self::Target {
@@ -259,17 +307,22 @@ impl Deref for MessageDetailFlatten {
     }
 }
 impl MessageEvent {
-    pub fn flatten(self) -> MessageDetailFlatten {
+    pub fn flatten(self) -> MessageEventFlattened {
         match self {
-            MessageEvent::Private {
-                ref sender, base, ..
-            } => MessageDetailFlatten {
+            MessageEvent::Private { sender, base, .. } => MessageEventFlattened {
                 message: base.message,
-                contact: ConversationContact::Private(UserID(sender.user_id.to_string())),
+                contact: ConversationContact::Private(UserID(sender.user_id)),
+                sender: sender.into(),
             },
-            MessageEvent::Group { base, group_id, .. } => MessageDetailFlatten {
+            MessageEvent::Group {
+                base,
+                group_id,
+                sender,
+                ..
+            } => MessageEventFlattened {
                 message: base.message,
-                contact: ConversationContact::Group(GroupID(group_id.to_string())),
+                contact: ConversationContact::Group(GroupID(group_id)),
+                sender: sender.into(),
             },
         }
     }
@@ -282,13 +335,13 @@ impl MessageEvent {
                 ref sender, base, ..
             } => (
                 base.message,
-                ConversationContact::Private(UserID(sender.user_id.to_string())),
+                ConversationContact::Private(UserID(sender.user_id)),
             ),
             MessageEvent::Group {
                 ref sender, base, ..
             } => (
                 base.message,
-                ConversationContact::Group(GroupID(sender.user_id.to_string())),
+                ConversationContact::Group(GroupID(sender.user_id)),
             ),
         }
     }

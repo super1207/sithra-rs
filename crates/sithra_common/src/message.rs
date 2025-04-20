@@ -14,28 +14,106 @@ pub struct SMessage {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct UserID(pub String);
+pub struct UserID(pub u64);
 
-impl<T: ToString> From<T> for UserID {
-    fn from(value: T) -> Self {
-        Self(value.to_string())
+impl From<u64> for UserID {
+    fn from(value: u64) -> Self {
+        Self(value)
+    }
+}
+
+impl From<i64> for UserID {
+    fn from(value: i64) -> Self {
+        Self(value as u64)
+    }
+}
+
+impl From<UserID> for u64 {
+    fn from(value: UserID) -> Self {
+        value.0
+    }
+}
+
+impl From<UserID> for i64 {
+    fn from(value: UserID) -> Self {
+        value.0 as i64
+    }
+}
+
+impl From<UserID> for String {
+    fn from(value: UserID) -> Self {
+        value.0.to_string()
+    }
+}
+
+impl From<String> for UserID {
+    fn from(value: String) -> Self {
+        Self(value.parse().unwrap())
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct GroupID(pub String);
+pub struct GroupID(pub u64);
 
-impl <T: ToString> From<T> for GroupID {
-    fn from(value: T) -> Self {
-        Self(value.to_string())
+impl From<u64> for GroupID {
+    fn from(value: u64) -> Self {
+        Self(value)
+    }
+}
+
+impl From<i64> for GroupID {
+    fn from(value: i64) -> Self {
+        Self(value as u64)
+    }
+}
+
+impl From<GroupID> for u64 {
+    fn from(value: GroupID) -> Self {
+        value.0
+    }
+}
+
+impl From<GroupID> for i64 {
+    fn from(value: GroupID) -> Self {
+        value.0 as i64
+    }
+}
+
+impl From<GroupID> for String {
+    fn from(value: GroupID) -> Self {
+        value.0.to_string()
+    }
+}
+
+impl From<String> for GroupID {
+    fn from(value: String) -> Self {
+        Self(value.parse().unwrap())
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MessageID(pub String);
 
-impl <T: ToString> From<T> for MessageID {
-    fn from(value: T) -> Self {
+impl ToString for MessageID {
+    fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
+
+impl From<String> for MessageID {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl From<&String> for MessageID {
+    fn from(value: &String) -> Self {
+        Self(value.clone())
+    }
+}
+
+impl From<i32> for MessageID {
+    fn from(value: i32) -> Self {
         Self(value.to_string())
     }
 }
@@ -62,6 +140,63 @@ pub enum MessageNode {
     Reply(MessageID),
     /// 未知
     Unknown(UnknownMessage),
+}
+
+impl ToString for MessageNode {
+    fn to_string(&self) -> String {
+        match self {
+            MessageNode::Text(text) => text.clone(),
+            MessageNode::Image(url) => format!("![]({})", url),
+            MessageNode::At(user_id) => format!("@{}", user_id.0),
+            MessageNode::Poke => "戳一戳".to_string(),
+            MessageNode::Share(url) => format!("[分享]({})", url),
+            MessageNode::Record(url) => format!("[语音]({})", url),
+            MessageNode::Contact(contact) => match contact {
+                ConversationContact::Private(user_id) => format!("[推荐好友]({})", user_id.0),
+                ConversationContact::Group(group_id) => format!("[推荐群]({})", group_id.0),
+            },
+            MessageNode::Location(lat, lon) => format!("[位置]({},{})", lat, lon),
+            MessageNode::Reply(message_id) => format!("[引用]({})", message_id.to_string()),
+            MessageNode::Unknown(unknown) => format!("{:?}", unknown),
+        }
+    }
+}
+
+pub trait MessageExt {
+    fn to_string(&self) -> String;
+    fn trim_start_matches(self, prefix: &str) -> Self;
+    fn starts_with(&self, prefix: &str) -> bool;
+}
+
+impl MessageExt for Vec<MessageNode> {
+    fn to_string(&self) -> String {
+        self.iter()
+            .map(|node| node.to_string())
+            .collect::<Vec<String>>()
+            .join(" ")
+    }
+    fn trim_start_matches(self, prefix: &str) -> Self {
+        self.into_iter()
+            .enumerate()
+            .map(|(i, node)| {
+                if i != 0 {
+                    return node;
+                }
+                match node {
+                    MessageNode::Text(text) => {
+                        MessageNode::Text(text.trim_start_matches(prefix).to_string())
+                    }
+                    _ => node,
+                }
+            })
+            .collect()
+    }
+    fn starts_with(&self, prefix: &str) -> bool {
+        match self.first() {
+            Some(MessageNode::Text(text)) => text.starts_with(prefix),
+            _ => false,
+        }
+    }
 }
 
 pub mod command {
@@ -117,21 +252,25 @@ impl TryFrom<InternalMessage> for MessageNode {
             InternalMessage::Image(data) => MessageNode::Image(data.file),
             InternalMessage::Record(data) => MessageNode::Record(data.file),
             InternalMessage::At(data) => MessageNode::At(UserID(
-                data.id.unwrap_or(data.qq.ok_or("expected id or qq")?),
+                data.id
+                    .unwrap_or(data.qq.ok_or("expected id or qq")?)
+                    .parse()
+                    .map_err(|_| "id must be a number")?,
             )),
             InternalMessage::Poke(_data) => MessageNode::Poke,
             InternalMessage::Share(data) => MessageNode::Share(data.url),
             InternalMessage::Contact(data) => match data.contact_type {
-                internal::ContactType::Group => {
-                    MessageNode::Contact(ConversationContact::Group(GroupID(data.id)))
-                }
-                internal::ContactType::QQ => {
-                    MessageNode::Contact(ConversationContact::Private(UserID(data.id)))
-                }
+                internal::ContactType::Group => MessageNode::Contact(ConversationContact::Group(
+                    GroupID(data.id.parse().map_err(|_| "id must be a number")?),
+                )),
+                internal::ContactType::QQ => MessageNode::Contact(ConversationContact::Private(
+                    UserID(data.id.parse().map_err(|_| "id must be a number")?),
+                )),
             },
-            InternalMessage::Location(data) => {
-                MessageNode::Location(data.lat.parse().unwrap(), data.lon.parse().unwrap())
-            }
+            InternalMessage::Location(data) => MessageNode::Location(
+                data.lat.parse().map_err(|_| "lat must be a number")?,
+                data.lon.parse().map_err(|_| "lon must be a number")?,
+            ),
             InternalMessage::Reply(data) => MessageNode::Reply(MessageID(data.id)),
             InternalMessage::Unknown(data) => MessageNode::Unknown(data),
         })
