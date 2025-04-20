@@ -2,3 +2,4 @@
 ws-url = "ws://localhost:8084" # 请修改为你的 onebot 服务器的 WebSocket 地址
 # 支持的日志级别: debug, info, warn, error, trace
 log-level = "info" # 请修改为你的日志级别
+self-id = 1234567890 # 请修改为你的机器人 QQ 号

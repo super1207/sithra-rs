@@ -21,6 +21,8 @@ pub struct BaseConfig {
     pub ws_url: String,
     #[serde(rename = "log-level")]
     pub log_level: LogLevel,
+    #[serde(rename = "self-id")]
+    pub self_id: u64,
 }
 
 impl Config {

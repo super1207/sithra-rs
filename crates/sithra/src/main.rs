@@ -35,7 +35,8 @@ async fn main() -> anyhow::Result<()> {
     while let Some(entry) = plugin_dir.next_entry().await? {
         let path = entry.path();
         if path.is_file() {
-            let child = Command::new(&path);
+            let mut child = Command::new(&path);
+            child.arg(config.base.self_id.to_string());
             let io: IoPair<_, _> = child.try_into()?;
             builder.add_pair(io);
             info!(target: "plugin_loader", "成功加载插件: {:?}", path.file_name().unwrap().to_str());
@@ -52,6 +53,7 @@ async fn main() -> anyhow::Result<()> {
         &join_url(&config.base.ws_url, "event/"),
         &join_url(&config.base.ws_url, "api/"),
         wright,
+        config.base.self_id
     )
     .await?;
 

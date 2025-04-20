@@ -161,16 +161,16 @@ pub mod response {
         pub protocol_version: String,
     }
     impl ProcedureCallResponse for VersionInfo {}
-    impl From<internal::MessageIdResponse> for MessageIdResponse {
-        fn from(i: internal::MessageIdResponse) -> Self {
+    impl From<api_internal::MessageIdResponse> for MessageIdResponse {
+        fn from(i: api_internal::MessageIdResponse) -> Self {
             Self {
                 message_id: i.message_id.into(),
             }
         }
     }
 
-    impl From<internal::SenderInfo> for SenderInfo {
-        fn from(i: internal::SenderInfo) -> Self {
+    impl From<api_internal::SenderInfo> for SenderInfo {
+        fn from(i: api_internal::SenderInfo) -> Self {
             Self {
                 user_id: i.user_id,
                 nickname: i.nickname,
@@ -180,8 +180,8 @@ pub mod response {
         }
     }
 
-    impl From<internal::LoginInfo> for LoginInfo {
-        fn from(i: internal::LoginInfo) -> Self {
+    impl From<api_internal::LoginInfo> for LoginInfo {
+        fn from(i: api_internal::LoginInfo) -> Self {
             Self {
                 user_id: i.user_id.into(),
                 nickname: i.nickname,
@@ -189,8 +189,8 @@ pub mod response {
         }
     }
 
-    impl From<internal::StrangerInfo> for StrangerInfo {
-        fn from(i: internal::StrangerInfo) -> Self {
+    impl From<api_internal::StrangerInfo> for StrangerInfo {
+        fn from(i: api_internal::StrangerInfo) -> Self {
             Self {
                 user_id: i.user_id,
                 nickname: i.nickname,
@@ -201,8 +201,8 @@ pub mod response {
         }
     }
 
-    impl From<internal::GroupInfo> for GroupInfo {
-        fn from(i: internal::GroupInfo) -> Self {
+    impl From<api_internal::GroupInfo> for GroupInfo {
+        fn from(i: api_internal::GroupInfo) -> Self {
             Self {
                 group_id: i.group_id.into(),
                 group_name: i.group_name,
@@ -212,8 +212,8 @@ pub mod response {
         }
     }
 
-    impl From<internal::GroupMemberInfo> for GroupMemberInfo {
-        fn from(i: internal::GroupMemberInfo) -> Self {
+    impl From<api_internal::GroupMemberInfo> for GroupMemberInfo {
+        fn from(i: api_internal::GroupMemberInfo) -> Self {
             Self {
                 group_id: i.group_id.into(),
                 user_id: i.user_id.into(),
@@ -231,14 +231,14 @@ pub mod response {
         }
     }
 
-    impl From<Vec<internal::GroupMemberInfo>> for GroupMemberList {
-        fn from(i: Vec<internal::GroupMemberInfo>) -> Self {
+    impl From<Vec<api_internal::GroupMemberInfo>> for GroupMemberList {
+        fn from(i: Vec<api_internal::GroupMemberInfo>) -> Self {
             Self(i.into_iter().map(|x| x.into()).collect())
         }
     }
 
-    impl From<internal::StatusInfo> for StatusInfo {
-        fn from(i: internal::StatusInfo) -> Self {
+    impl From<api_internal::StatusInfo> for StatusInfo {
+        fn from(i: api_internal::StatusInfo) -> Self {
             Self {
                 online: i.online,
                 good: i.good,
@@ -246,8 +246,8 @@ pub mod response {
         }
     }
 
-    impl From<internal::VersionInfo> for VersionInfo {
-        fn from(i: internal::VersionInfo) -> Self {
+    impl From<api_internal::VersionInfo> for VersionInfo {
+        fn from(i: api_internal::VersionInfo) -> Self {
             Self {
                 app_name: i.app_name,
                 app_version: i.app_version,
@@ -256,8 +256,8 @@ pub mod response {
         }
     }
 
-    impl From<internal::MessageDetail> for (MessageDetail, Vec<&'static str>) {
-        fn from(i: internal::MessageDetail) -> Self {
+    impl From<api_internal::MessageDetail> for (MessageDetail, Vec<&'static str>) {
+        fn from(i: api_internal::MessageDetail) -> Self {
             let mut errors = Vec::new();
             let message = i
                 .message
@@ -279,14 +279,14 @@ pub mod response {
         }
     }
 
-    impl From<internal::GroupMemberList> for GroupMemberList {
-        fn from(i: internal::GroupMemberList) -> Self {
+    impl From<api_internal::GroupMemberList> for GroupMemberList {
+        fn from(i: api_internal::GroupMemberList) -> Self {
             Self(i.0.into_iter().map(|x| x.into()).collect())
         }
     }
 
-    pub mod internal {
-        use crate::message::internal::InternalMessage;
+    pub mod api_internal {
+        use crate::message::message_internal::InternalMessage;
         use serde::{Deserialize, Serialize};
 
         /// API响应基础结构
@@ -463,7 +463,7 @@ pub mod request {
     use serde::{Deserialize, Serialize};
 
     use super::error::ApiError;
-    use crate::message::{GroupID, MessageID, MessageNode, UserID, internal::InternalMessage};
+    use crate::message::{GroupID, MessageID, MessageNode, UserID, message_internal::InternalMessage};
 
     #[derive(Debug, Serialize, Deserialize, ProcedureCall)]
     pub struct NoneRequest;

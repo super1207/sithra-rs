@@ -18,12 +18,12 @@ use sithra_common::{
     api::{
         ApiRequest, ApiRequestKind,
         data::request,
-        internal::{ApiResponse, ApiResponseKind},
+        api_internal::{ApiResponse, ApiResponseKind},
     },
     error::ApiError,
     event::{
         self,
-        internal::{InternalOnebotEvent, InternalOnebotEventKind},
+        event_internal::{InternalOnebotEvent, InternalOnebotEventKind},
     },
     message,
 };
@@ -42,6 +42,7 @@ pub struct ClientState {
     pub api_sender: mpsc::UnboundedSender<ApiRequest>,
     pub api_shooters: Arc<DashMap<String, oneshot::Sender<Result<ApiResponse, ApiError>>>>,
     pub pcw: DefaultProcedureWright,
+    pub self_id: u64,
 }
 impl ProcedureCallWright for ClientState {
     fn next_echo(&self) -> impl Future<Output = u64> + Send {
@@ -86,6 +87,8 @@ pub const ECHO_GENERATOR: LazyLock<Mutex<SmallRng>> =
     LazyLock::new(|| Mutex::new(SmallRng::from_os_rng()));
 
 mod msg_receiver {
+    use log::debug;
+
     use super::*;
     pub struct MsgReceiver {
         pub stream: WebSocketStream<MaybeTlsStream<TcpStream>>,
@@ -101,7 +104,6 @@ mod msg_receiver {
         };
         let message = message;
         let message = ignore_err!(message);
-        log::debug!("收到消息: {:?}", message);
         if message.is_ping() {
             msg_receiver.stream.send(Message::Pong(message.into_data()));
             return;
@@ -121,15 +123,25 @@ mod msg_receiver {
         ignore_err_out!(msg_receiver.state.wright.emit(&event));
         match event.kind {
             event::EventKind::Message(message_detail) => {
+                debug!("消息事件: {:?}", message_detail);
                 ignore_err_out!(msg_receiver.state.wright.emit(&message_detail));
             }
             event::EventKind::Notice(notice_detail) => {
+                debug!("通知事件: {:?}", notice_detail);
                 ignore_err_out!(msg_receiver.state.wright.emit(&notice_detail));
+                match notice_detail {
+                    event::NoticeEvent::Notify(notify) => {
+                        ignore_err_out!(msg_receiver.state.wright.emit(&notify));
+                    }
+                    _ => {}
+                }
             }
             event::EventKind::Request(request_detail) => {
+                debug!("请求事件: {:?}", request_detail);
                 ignore_err_out!(msg_receiver.state.wright.emit(&request_detail));
             }
             event::EventKind::Meta(meta_detail) => {
+                debug!("元事件: {:?}", meta_detail);
                 ignore_err_out!(msg_receiver.state.wright.emit(&meta_detail));
             }
             event::EventKind::Unknown(value) => {
@@ -163,7 +175,7 @@ mod api_sender {
 mod api_receiver {
     use futures_util::future::err;
     use log::{debug, info};
-    use sithra_common::api::internal::OnlyEcho;
+    use sithra_common::api::api_internal::OnlyEcho;
 
     use super::*;
     pub struct ApiReceiverWsState {
@@ -218,7 +230,12 @@ pub struct App {
 }
 
 impl App {
-    pub async fn new(url: &str, api_url: &str, bus: EffectWright) -> anyhow::Result<Self> {
+    pub async fn new(
+        url: &str,
+        api_url: &str,
+        bus: EffectWright,
+        self_id: u64,
+    ) -> anyhow::Result<Self> {
         let stream = build_ws_stream(url).await?;
         let (ws_sender, ws_receiver) = build_ws_split(api_url).await?;
         let (api_sender, api_receiver) = mpsc::unbounded_channel::<ApiRequest>();
@@ -226,6 +243,7 @@ impl App {
             api_sender,
             api_shooters: Arc::new(DashMap::new()),
             pcw: DefaultProcedureWright::default(),
+            self_id,
         };
         let state = State::new(state, bus);
         let msg_receiver = MsgReceiver {

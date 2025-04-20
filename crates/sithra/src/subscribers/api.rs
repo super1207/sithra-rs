@@ -4,7 +4,7 @@ use ioevent::rpc::*;
 use log::error;
 use rand::RngCore;
 use sithra_common::api::data::request;
-use sithra_common::api::internal::ApiResponseKind;
+use sithra_common::api::api_internal::ApiResponseKind;
 use sithra_common::api::*;
 use sithra_common::error::ApiError;
 use std::time::Duration;

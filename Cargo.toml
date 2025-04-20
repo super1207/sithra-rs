@@ -30,5 +30,7 @@ codegen-units = 16
 [profile.release]
 debug = "limited"
 lto = "thin"
+panic = "abort"
+strip = true
 codegen-units = 1
 opt-level = 3

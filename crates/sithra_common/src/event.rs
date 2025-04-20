@@ -2,7 +2,11 @@
 //!
 //! 本模块定义了符合 OneBot 标准的事件结构，且进行了一定的抽象。
 
-pub mod internal;
+mod internal;
+
+pub mod event_internal {
+    pub use super::internal::*;
+}
 
 use std::ops::Deref;
 
@@ -13,6 +17,8 @@ use internal::*;
 use ioevent::Event;
 use ioevent::rpc::*;
 use serde::{Deserialize, Serialize};
+
+pub use internal::NotifyEvent;
 
 #[derive(Debug, Serialize, Deserialize, Event)]
 pub struct OnebotEvent {
@@ -79,16 +85,16 @@ impl From<InternalOnebotEvent> for (OnebotEvent, Option<Vec<&'static str>>) {
 #[derive(Debug, Serialize, Deserialize, Event)]
 pub enum EventKind {
     /// 消息事件（私聊/群聊）
-    Message(MessageDetail),
+    Message(MessageEvent),
 
     /// 通知事件（群组变动/戳一戳等）
-    Notice(NoticeDetail),
+    Notice(NoticeEvent),
 
     /// 请求事件（好友/群组邀请）
-    Request(RequestDetail),
+    Request(RequestEvnet),
 
     /// 元事件（心跳/生命周期）
-    Meta(MetaDetail),
+    Meta(MetaEvnet),
 
     /// 未知类型的备用变体
     Unknown(serde_json::Value),
@@ -118,7 +124,7 @@ pub struct MessageCommon {
 
 /// 详细的消息类型分类
 #[derive(Debug, Serialize, Deserialize, Event)]
-pub enum MessageDetail {
+pub enum MessageEvent {
     /// 私聊消息事件
     Private {
         /// 通用消息字段
@@ -143,12 +149,12 @@ pub enum MessageDetail {
         sender: GroupSender,
     },
 }
-impl From<internal::MessageEvent> for (MessageDetail, Vec<&'static str>) {
-    fn from(value: internal::MessageEvent) -> Self {
+impl From<internal::InternalMessageEvent> for (MessageEvent, Vec<&'static str>) {
+    fn from(value: internal::InternalMessageEvent) -> Self {
         match value {
-            MessageEvent::Private(private_message) => {
+            InternalMessageEvent::Private(private_message) => {
                 let mut errors = Vec::new();
-                let internal::PrivateMessage {
+                let internal::InternalPrivateMessage {
                     sub_type,
                     message_id,
                     user_id,
@@ -171,16 +177,16 @@ impl From<internal::MessageEvent> for (MessageDetail, Vec<&'static str>) {
                     font,
                 };
                 (
-                    MessageDetail::Private {
+                    MessageEvent::Private {
                         base: common,
                         sender: sender.into(),
                     },
                     errors,
                 )
             }
-            MessageEvent::Group(group_message) => {
+            InternalMessageEvent::Group(group_message) => {
                 let mut errors = Vec::new();
-                let internal::GroupMessage {
+                let internal::InternalGroupMessage {
                     sub_type,
                     message_id,
                     group_id,
@@ -205,7 +211,7 @@ impl From<internal::MessageEvent> for (MessageDetail, Vec<&'static str>) {
                     font,
                 };
                 (
-                    MessageDetail::Group {
+                    MessageEvent::Group {
                         base: common,
                         group_id,
                         anonymous: anonymous.map(|x| x.into()),
@@ -252,16 +258,16 @@ impl Deref for MessageDetailFlatten {
         &self.message
     }
 }
-impl MessageDetail {
+impl MessageEvent {
     pub fn flatten(self) -> MessageDetailFlatten {
         match self {
-            MessageDetail::Private {
+            MessageEvent::Private {
                 ref sender, base, ..
             } => MessageDetailFlatten {
                 message: base.message,
                 contact: ConversationContact::Private(UserID(sender.user_id.to_string())),
             },
-            MessageDetail::Group { base, group_id, .. } => MessageDetailFlatten {
+            MessageEvent::Group { base, group_id, .. } => MessageDetailFlatten {
                 message: base.message,
                 contact: ConversationContact::Group(GroupID(group_id.to_string())),
             },
@@ -269,16 +275,16 @@ impl MessageDetail {
     }
 }
 
-impl MessageDetail {
+impl MessageEvent {
     pub fn downcast(self) -> (Vec<MessageNode>, ConversationContact) {
         match self {
-            MessageDetail::Private {
+            MessageEvent::Private {
                 ref sender, base, ..
             } => (
                 base.message,
                 ConversationContact::Private(UserID(sender.user_id.to_string())),
             ),
-            MessageDetail::Group {
+            MessageEvent::Group {
                 ref sender, base, ..
             } => (
                 base.message,
@@ -290,7 +296,7 @@ impl MessageDetail {
 
 /// 群组通知事件详细类型
 #[derive(Debug, Serialize, Deserialize, Event)]
-pub enum NoticeDetail {
+pub enum NoticeEvent {
     /// 群文件上传通知
     GroupUpload {
         /// 群ID
@@ -311,7 +317,7 @@ pub enum NoticeDetail {
         sub_type: String,
     },
 
-    /// 群成员减少通知（退群/踢人）
+    /// 群成员变动通知（退群/踢人）
     GroupChange {
         /// 群组ID
         group_id: u64,
@@ -322,8 +328,26 @@ pub enum NoticeDetail {
         /// 变动子类型
         sub_type: GroupChangeType,
     },
-    /// 未知类型
-    Unknown,
+    /// 好友添加请求
+    FriendAdd {
+        /// 请求者ID
+        user_id: u64,
+    },
+    Notify(internal::NotifyEvent),
+    /// 群聊撤回消息
+    GroupRecall {
+        /// 群ID
+        group_id: u64,
+        /// 操作者ID
+        user_id: u64,
+    },
+    /// 私聊撤回消息
+    PrivateRecall {
+        /// 操作者ID
+        user_id: u64,
+    },
+    /// 不常用
+    Other(internal::InternalNoticeEvent),
 }
 
 /// 群成员变动子类型
@@ -357,7 +381,7 @@ impl From<String> for GroupChangeType {
 
 /// 请求事件详细类型
 #[derive(Debug, Serialize, Deserialize, Event)]
-pub enum RequestDetail {
+pub enum RequestEvnet {
     /// 好友添加请求
     Friend {
         /// 请求者用户ID
@@ -385,7 +409,7 @@ pub enum RequestDetail {
 
 /// 元事件详细类型
 #[derive(Debug, Serialize, Deserialize, Event)]
-pub enum MetaDetail {
+pub enum MetaEvnet {
     /// 机器人生命周期事件
     Lifecycle {
         /// 生命周期子类型（enable/disable等）
@@ -522,8 +546,8 @@ pub struct FileInfo {
     pub busid: u64,
 }
 
-impl From<internal::PrivateSender> for PrivateSender {
-    fn from(value: internal::PrivateSender) -> Self {
+impl From<internal::InternalPrivateSender> for PrivateSender {
+    fn from(value: internal::InternalPrivateSender) -> Self {
         PrivateSender {
             user_id: value.user_id,
             nickname: value.nickname,
@@ -533,8 +557,8 @@ impl From<internal::PrivateSender> for PrivateSender {
     }
 }
 
-impl From<internal::Anonymous> for Anonymous {
-    fn from(value: internal::Anonymous) -> Self {
+impl From<internal::InternalAnonymous> for Anonymous {
+    fn from(value: internal::InternalAnonymous) -> Self {
         Anonymous {
             id: value.id,
             name: value.name,
@@ -543,8 +567,8 @@ impl From<internal::Anonymous> for Anonymous {
     }
 }
 
-impl From<internal::GroupSender> for GroupSender {
-    fn from(value: internal::GroupSender) -> Self {
+impl From<internal::InternalGroupSender> for GroupSender {
+    fn from(value: internal::InternalGroupSender) -> Self {
         GroupSender {
             user_id: value.user_id,
             nickname: value.nickname,
@@ -556,20 +580,26 @@ impl From<internal::GroupSender> for GroupSender {
     }
 }
 
-impl From<NoticeEvent> for NoticeDetail {
-    fn from(value: NoticeEvent) -> Self {
+impl From<InternalNoticeEvent> for NoticeEvent {
+    fn from(value: InternalNoticeEvent) -> Self {
         match value {
-            NoticeEvent::GroupUpload(n) => n.into(),
-            NoticeEvent::GroupAdmin(n) => n.into(),
-            NoticeEvent::GroupDecrease(n) => n.into(),
-            _ => NoticeDetail::Unknown,
+            InternalNoticeEvent::GroupUpload(n) => n.into(),
+            InternalNoticeEvent::GroupAdmin(n) => n.into(),
+            InternalNoticeEvent::GroupDecrease(n) => n.into(),
+            InternalNoticeEvent::GroupIncrease(n) => n.into(),
+            InternalNoticeEvent::GroupBan(n) => n.into(),
+            InternalNoticeEvent::FriendAdd(n) => n.into(),
+            InternalNoticeEvent::GroupRecall(n) => n.into(),
+            InternalNoticeEvent::FriendRecall(n) => n.into(),
+            InternalNoticeEvent::Notify(n) => NoticeEvent::Notify(n),
+            _ => NoticeEvent::Other(value),
         }
     }
 }
 
-impl From<GroupUploadNotice> for NoticeDetail {
-    fn from(value: GroupUploadNotice) -> Self {
-        NoticeDetail::GroupUpload {
+impl From<InternalGroupUploadNotice> for NoticeEvent {
+    fn from(value: InternalGroupUploadNotice) -> Self {
+        NoticeEvent::GroupUpload {
             group_id: value.group_id,
             user_id: value.user_id,
             file: FileInfo {
@@ -582,9 +612,9 @@ impl From<GroupUploadNotice> for NoticeDetail {
     }
 }
 
-impl From<GroupAdminNotice> for NoticeDetail {
-    fn from(value: GroupAdminNotice) -> Self {
-        NoticeDetail::GroupAdmin {
+impl From<InternalGroupAdminNotice> for NoticeEvent {
+    fn from(value: InternalGroupAdminNotice) -> Self {
+        NoticeEvent::GroupAdmin {
             group_id: value.group_id,
             user_id: value.user_id,
             sub_type: value.sub_type,
@@ -592,9 +622,9 @@ impl From<GroupAdminNotice> for NoticeDetail {
     }
 }
 
-impl From<GroupDecreaseNotice> for NoticeDetail {
-    fn from(value: GroupDecreaseNotice) -> Self {
-        NoticeDetail::GroupChange {
+impl From<InternalGroupDecreaseNotice> for NoticeEvent {
+    fn from(value: InternalGroupDecreaseNotice) -> Self {
+        NoticeEvent::GroupChange {
             group_id: value.group_id,
             user_id: value.user_id,
             _id: value.operator_id,
@@ -603,18 +633,65 @@ impl From<GroupDecreaseNotice> for NoticeDetail {
     }
 }
 
-impl From<RequestEvent> for RequestDetail {
-    fn from(value: RequestEvent) -> Self {
-        match value {
-            RequestEvent::Friend(f) => f.into(),
-            RequestEvent::Group(g) => g.into(),
+impl From<InternalGroupIncreaseNotice> for NoticeEvent {
+    fn from(value: InternalGroupIncreaseNotice) -> Self {
+        NoticeEvent::GroupChange {
+            group_id: value.group_id,
+            user_id: value.user_id,
+            _id: value.operator_id,
+            sub_type: value.sub_type.into(),
         }
     }
 }
 
-impl From<FriendRequest> for RequestDetail {
-    fn from(value: FriendRequest) -> Self {
-        RequestDetail::Friend {
+impl From<InternalGroupBanNotice> for NoticeEvent {
+    fn from(value: InternalGroupBanNotice) -> Self {
+        NoticeEvent::GroupChange {
+            group_id: value.group_id,
+            user_id: value.user_id,
+            _id: value.operator_id,
+            sub_type: value.sub_type.into(),
+        }
+    }
+}
+
+impl From<InternalFriendAddNotice> for NoticeEvent {
+    fn from(value: InternalFriendAddNotice) -> Self {
+        NoticeEvent::FriendAdd {
+            user_id: value.user_id,
+        }
+    }
+}
+
+impl From<InternalGroupRecallNotice> for NoticeEvent {
+    fn from(value: InternalGroupRecallNotice) -> Self {
+        NoticeEvent::GroupRecall {
+            group_id: value.group_id,
+            user_id: value.user_id,
+        }
+    }
+}
+
+impl From<InternalFriendRecallNotice> for NoticeEvent {
+    fn from(value: InternalFriendRecallNotice) -> Self {
+        NoticeEvent::PrivateRecall {
+            user_id: value.user_id,
+        }
+    }
+}
+
+impl From<InternalRequestEvent> for RequestEvnet {
+    fn from(value: InternalRequestEvent) -> Self {
+        match value {
+            InternalRequestEvent::Friend(f) => f.into(),
+            InternalRequestEvent::Group(g) => g.into(),
+        }
+    }
+}
+
+impl From<InternalFriendRequest> for RequestEvnet {
+    fn from(value: InternalFriendRequest) -> Self {
+        RequestEvnet::Friend {
             user_id: value.user_id,
             comment: value.comment,
             flag: value.flag,
@@ -622,9 +699,9 @@ impl From<FriendRequest> for RequestDetail {
     }
 }
 
-impl From<GroupRequest> for RequestDetail {
-    fn from(value: GroupRequest) -> Self {
-        RequestDetail::Group {
+impl From<InternalGroupRequest> for RequestEvnet {
+    fn from(value: InternalGroupRequest) -> Self {
+        RequestEvnet::Group {
             group_id: value.group_id,
             user_id: value.user_id,
             comment: value.comment,
@@ -634,13 +711,13 @@ impl From<GroupRequest> for RequestDetail {
     }
 }
 
-impl From<MetaEvent> for MetaDetail {
-    fn from(value: MetaEvent) -> Self {
+impl From<InternalMetaEvent> for MetaEvnet {
+    fn from(value: InternalMetaEvent) -> Self {
         match value {
-            MetaEvent::Lifecycle { sub_type } => MetaDetail::Lifecycle {
+            InternalMetaEvent::Lifecycle { sub_type } => MetaEvnet::Lifecycle {
                 sub_type: sub_type.into(),
             },
-            _ => MetaDetail::Unknown,
+            _ => MetaEvnet::Unknown,
         }
     }
 }

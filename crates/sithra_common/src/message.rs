@@ -1,4 +1,8 @@
-pub mod internal;
+mod internal;
+
+pub mod message_internal {
+    pub use super::internal::*;
+}
 
 use internal::*;
 use serde::{Deserialize, Serialize};
@@ -58,6 +62,45 @@ pub enum MessageNode {
     Reply(MessageID),
     /// 未知
     Unknown(UnknownMessage),
+}
+
+pub mod command {
+    use std::ops::Deref;
+
+    use super::*;
+    pub struct Text(pub String);
+    impl Deref for Text {
+        type Target = String;
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+    pub struct Image(pub String);
+    pub struct At(pub UserID);
+    impl Deref for At {
+        type Target = UserID;
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+    pub struct Poke;
+    pub struct Share(pub String);
+    pub struct Record(pub String);
+    pub struct Contact(pub ConversationContact);
+    impl Deref for Contact {
+        type Target = ConversationContact;
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+    pub struct Location(pub f64, pub f64);
+    pub struct Reply(pub MessageID);
+    impl Deref for Reply {
+        type Target = MessageID;
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
