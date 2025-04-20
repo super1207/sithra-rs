@@ -28,8 +28,9 @@
 开始开发 `sithra-rs` 的插件，需要为你的 crate 添加这些依赖：
 
 ```toml
-ioevent = { version = "0.1.0-rc.2", git = "https://github.com/BERADQ/ioevent.git" }
+ioevent = { git = "https://github.com/BERADQ/ioevent.git" }
 tokio = "*"
+log = "*"
 sithra_common = { git = "https://github.com/SithraBot/sithra-rs.git" }
 ```
 
@@ -62,7 +63,7 @@ async fn echo_msg(state: State<DefaultProcedureWright>, msg: event::MessageDetai
 
 #[sithra_common::main(subscribers = SUBSCRIBERS, state = DefaultProcedureWright::default())]
 async fn main(_effect_wright: &ioevent::EffectWright) {
-    log::info!("echo 示例插件启动成功");
+    info!("echo 示例插件启动成功");
 }
 ```
 
