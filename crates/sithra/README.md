@@ -28,7 +28,7 @@
 开始开发 `sithra-rs` 的插件，需要为你的 crate 添加这些依赖：
 
 ```toml
-ioevent = "*"
+ioevent = { version = "0.1.0-rc.2", git = "https://github.com/BERADQ/ioevent.git" }
 tokio = "*"
 sithra_common = { git = "https://github.com/SithraBot/sithra-rs.git" }
 ```
@@ -70,7 +70,7 @@ async fn main(_effect_wright: &ioevent::EffectWright) {
 
 `sithra-rs` 的一切都离不开 [`ioevent`](https://github.com/BERADQ/ioevent)。
 
-对于插件开发的一些基本知识，请参阅 [`ioevent` doc](https://docs.rs/ioevent/latest/ioevent/)。
+对于插件开发的一些基本知识，请参阅 [`ioevent` doc](https://docs.rs/ioevent/latest/ioevent/) **(过时)**。
 
 [待补充]
 
