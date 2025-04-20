@@ -29,39 +29,34 @@
 
 ```toml
 ioevent = { git = "https://github.com/BERADQ/ioevent.git" }
+sithra_common = { git = "https://github.com/SithraBot/sithra-rs.git" }
 tokio = "*"
 log = "*"
-sithra_common = { git = "https://github.com/SithraBot/sithra-rs.git" }
 ```
 
-一个最简单的 echo 插件精神面貌是这样的：
+一个简单的 echo 插件精神面貌是这样的：
 
 ```rust
+use event::MessageEventFlattened as Message;
 use ioevent::{prelude::*, rpc::*};
 use log::info;
-use sithra_common::{event, prelude::MessageNode};
+use sithra_common::prelude::*;
 
-const SUBSCRIBERS: &[ioevent::Subscriber<DefaultProcedureWright>] = &[create_subscriber!(echo_msg)];
+const SUBSCRIBERS: &[ioevent::Subscriber<CommonState>] = &[
+    create_subscriber!(echo_msg)
+];
 
-#[subscriber]
-async fn echo_msg(state: State<DefaultProcedureWright>, msg: event::MessageDetail) -> Result {
-    let msg = msg.flatten();
-    if msg.message.len() > 0 {
-        if let Some(MessageNode::Text(text)) = msg.message.first() {
-            if text.starts_with("echo ") {
-                info!("echo 插件收到消息: {}", text);
-                let mut message = Vec::new();
-                let text = text.trim_start_matches("echo ");
-                message.push(MessageNode::Text(text.to_string()));
-                msg.reply(&state, message.clone()).await.unwrap();
-                info!("echo 插件回复消息: {}", text);
-            }
-        }
+#[subscribe_message]
+async fn echo_msg(msg: &Message) -> Option<Vec<MessageNode>> {
+    if msg.starts_with("echo ") {
+        info!("echo 插件收到{}发送的消息", msg.sender.call_name());
+        let message = msg.message.clone().trim_start_matches("echo ");
+        return Some(message);
     }
-    Ok(())
+    None
 }
 
-#[sithra_common::main(subscribers = SUBSCRIBERS, state = DefaultProcedureWright::default())]
+#[sithra_common::main(subscribers = SUBSCRIBERS, state = CommonState)]
 async fn main(_effect_wright: &ioevent::EffectWright) {
     info!("echo 示例插件启动成功");
 }
