@@ -76,16 +76,26 @@ pub async fn search_mcmod(s: State<McToolsState>, msg: Message) -> Result {
 
     let message = event.message.first().unwrap();
     let text = match message {
-        MessageNode::Text(text) => text,
-        _ => return Ok(()),
+        MessageNode::Text(text) => Ok(text),
+        _ => Err(McModError::InvalidInput(format!(
+            "{:?} is not a number",
+            message
+        ))),
     };
 
-    let id = match text.parse::<usize>() {
-        Ok(id) => id,
-        Err(_) => return Ok(()),
+    let id = match text.map(|s| s.parse::<usize>()) {
+        Ok(Ok(id)) => Ok(id),
+        Err(e) => Err(e),
+        Ok(Err(e)) => Err(McModError::InvalidInput(e.to_string())),
     };
-    
-    let result = result.get_content(id - 1, s.self_id().into()).await;
+
+    let result = match id {
+        Ok(id) => Some(result.get_content(id - 1, s.self_id().into()).await),
+        Err(e) => {
+            log::error!("mcmod 获取内容失败: {}", e);
+            None
+        }
+    };
 
     let del = DeleteMsgParams::new(forward_msg.message_id);
     if let Ok(del) = del {
@@ -95,19 +105,23 @@ pub async fn search_mcmod(s: State<McToolsState>, msg: Message) -> Result {
     }
 
     match result {
-        Ok(content) => {
+        Some(Ok(content)) => {
             let forward = CreateForwardMsgParams::new(content);
             let forward_id = s.call(&forward).await??;
-            msg.reply(&s, vec![MessageNode::Forward(forward_id.0.into())])
+            event.reply(&s, vec![MessageNode::Forward(forward_id.0.into())])
                 .await?;
         }
-        Err(e) => {
+        Some(Err(e)) => {
             log::error!("mcmod 获取 URL 失败: {}", e);
             event
                 .reply(
                     &s,
-                    vec![MessageNode::Text("你在说什么捏？听不懂捏。".to_string())],
+                    vec![MessageNode::Text("坏了，村里断网了。".to_string())],
                 )
+                .await?;
+        }
+        None => {
+            event.reply(&s, vec![MessageNode::Text("你是不是输入了奇怪的东西捏？".to_string())])
                 .await?;
         }
     };
@@ -230,6 +244,8 @@ pub enum McModError {
     CallSubscribeError(CallSubscribeError),
     #[error("index out of bounds: {0}")]
     IndexOutOfBounds(usize),
+    #[error("invalid input: {0}")]
+    InvalidInput(String),
 }
 impl From<reqwest::Error> for McModError {
     fn from(err: reqwest::Error) -> Self {
