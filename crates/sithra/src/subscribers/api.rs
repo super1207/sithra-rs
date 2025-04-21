@@ -37,6 +37,7 @@ macro_rules! api_procedure {
                 })?;
             match response {
                 Ok(Ok(response)) => {
+                    log::debug!("{} 接收响应: {:?}", stringify!($name), response);
                     if let Some(ApiResponseKind::$response(response)) = response.data {
                         Ok(Ok(response.into()))
                     } else {
@@ -119,6 +120,11 @@ api_procedure!(
     request::GetGroupMemberListParams,
     GroupMemberList
 );
+api_procedure!(
+    api_create_forward_msg,
+    request::CreateForwardMsgParams,
+    ForwardIdResponse
+);
 #[procedure]
 pub async fn api_get_msg(state: State<ClientState>, call: request::GetMsgParams) -> Result {
     let (sender, receiver) = oneshot::channel();
@@ -138,6 +144,7 @@ pub async fn api_get_msg(state: State<ClientState>, call: request::GetMsgParams)
     match response {
         Ok(Err(e)) => Ok(Err(e)),
         Ok(Ok(response)) => {
+            log::debug!("api_get_msg 接收响应: {:?}", response);
             if let Some(ApiResponseKind::MessageDetail(response)) = response.data {
                 let (message, errors) = response.into();
                 for error in errors {

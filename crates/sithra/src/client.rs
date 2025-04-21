@@ -125,6 +125,7 @@ mod msg_receiver {
             event::EventKind::Message(message_detail) => {
                 debug!("消息事件: {:?}", message_detail);
                 ignore_err_out!(msg_receiver.state.wright.emit(&message_detail));
+                ignore_err_out!(msg_receiver.state.wright.emit(&message_detail.flatten()));
             }
             event::EventKind::Notice(notice_detail) => {
                 debug!("通知事件: {:?}", notice_detail);

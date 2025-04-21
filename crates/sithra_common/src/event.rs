@@ -11,7 +11,7 @@ pub mod event_internal {
 use std::ops::Deref;
 
 use crate::api::{self, MessageIdResponse};
-use crate::message::{ConversationContact, GroupID, MessageNode, UserID};
+use crate::message::{ConversationContact, GroupId, MessageNode, UserId};
 use crate::traits::*;
 use internal::*;
 use ioevent::Event;
@@ -271,7 +271,7 @@ impl From<PrivateSender> for UniUser {
 }
 
 /// 消息事件的扁平化结构
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Event)]
 pub struct MessageEventFlattened {
     /// 消息内容
     pub message: Vec<MessageNode>,
@@ -311,7 +311,7 @@ impl MessageEvent {
         match self {
             MessageEvent::Private { sender, base, .. } => MessageEventFlattened {
                 message: base.message,
-                contact: ConversationContact::Private(UserID(sender.user_id)),
+                contact: ConversationContact::Private(UserId(sender.user_id)),
                 sender: sender.into(),
             },
             MessageEvent::Group {
@@ -321,7 +321,7 @@ impl MessageEvent {
                 ..
             } => MessageEventFlattened {
                 message: base.message,
-                contact: ConversationContact::Group(GroupID(group_id)),
+                contact: ConversationContact::Group(GroupId(group_id)),
                 sender: sender.into(),
             },
         }
@@ -335,13 +335,13 @@ impl MessageEvent {
                 ref sender, base, ..
             } => (
                 base.message,
-                ConversationContact::Private(UserID(sender.user_id)),
+                ConversationContact::Private(UserId(sender.user_id)),
             ),
             MessageEvent::Group {
                 ref sender, base, ..
             } => (
                 base.message,
-                ConversationContact::Group(GroupID(sender.user_id)),
+                ConversationContact::Group(GroupId(sender.user_id)),
             ),
         }
     }

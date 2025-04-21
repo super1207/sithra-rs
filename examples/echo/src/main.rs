@@ -6,14 +6,15 @@ use sithra_common::prelude::*;
 const SUBSCRIBERS: &[ioevent::Subscriber<CommonState>] =
     &[create_subscriber!(poke_reply), create_subscriber!(echo_msg)];
 
-#[subscribe_message]
-async fn echo_msg(msg: &Message) -> Option<Vec<MessageNode>> {
+#[subscriber]
+async fn echo_msg(state: State<CommonState>, msg: Message) -> Result {
     if msg.starts_with("echo ") {
         info!("echo 插件收到{}发送的消息", msg.sender.call_name());
         let message = msg.message.clone().trim_start_matches("echo ");
-        return Some(message);
+        let id = msg.reply(&state, message.clone()).await?;
+        info!("echo 插件回复消息: {:?}", id);
     }
-    None
+    Ok(())
 }
 
 #[subscriber]

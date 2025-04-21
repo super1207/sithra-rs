@@ -9,3 +9,7 @@ tokio.workspace = true
 sithra_common.workspace = true
 log.workspace = true
 reqwest = "0.12.15"
+bytes = "1.10.1"
+base64 = "0.22.1"
+scraper = { version = "0.23.1", default-features = false }
+thiserror.workspace = true

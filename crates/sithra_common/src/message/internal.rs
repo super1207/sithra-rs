@@ -3,17 +3,27 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type", content = "data")]
-#[serde(rename_all = "lowercase")]
 pub enum InternalMessage {
+    #[serde(rename = "text")]
     Text(TextData),
+    #[serde(rename = "image")]
     Image(MediaData),
+    #[serde(rename = "record")]
     Record(MediaData),
+    #[serde(rename = "at")]
     At(AtData),
+    #[serde(rename = "poke")]
     Poke(PokeData),
+    #[serde(rename = "share")]
     Share(ShareData),
+    #[serde(rename = "contact")]
     Contact(ContactData),
+    #[serde(rename = "location")]
     Location(LocationData),
+    #[serde(rename = "reply")]
     Reply(ReplyData),
+    #[serde(rename = "forward")]
+    Forward(ForwardData),
     #[serde(untagged)]
     Unknown(UnknownMessage),
 }
@@ -78,6 +88,38 @@ pub enum ContactType {
     Group,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ForwardData {
+    pub id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InternalForwardMessage {
+    #[serde(rename = "type")]
+    pub r#type: String,
+    pub data: InternalForwardMessageData,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InternalForwardMessageData {
+    pub user_id: String,
+    pub nickname: String,
+    pub content: Vec<InternalMessage>,
+}
+
+impl InternalForwardMessage {
+    pub fn new(user_id: u64, nickname: String, content: Vec<InternalMessage>) -> Self {
+        Self {
+            r#type: "node".to_string(),
+            data: InternalForwardMessageData {
+                user_id: user_id.to_string(),
+                nickname,
+                content,
+            },
+        }
+    }
+}
+
 impl From<MessageNode> for InternalMessage {
     fn from(node: MessageNode) -> InternalMessage {
         match node {
@@ -109,6 +151,9 @@ impl From<MessageNode> for InternalMessage {
             }),
             MessageNode::Reply(id) => InternalMessage::Reply(ReplyData {
                 id: id.0.to_string(),
+            }),
+            MessageNode::Forward(forward_node) => InternalMessage::Forward(ForwardData {
+                id: forward_node.id.0.to_string(),
             }),
             MessageNode::Unknown(data) => InternalMessage::Unknown(data),
         }

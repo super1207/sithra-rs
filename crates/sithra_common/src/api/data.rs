@@ -4,7 +4,7 @@ pub mod response {
 
     use crate::{
         event::{Role, Sex},
-        message::{GroupID, MessageID, MessageNode, UserID},
+        message::{ForwardId, GroupId, MessageId, MessageNode, UserId},
         traits::*,
     };
 
@@ -12,7 +12,7 @@ pub mod response {
     #[derive(Debug, Serialize, Deserialize, ProcedureCall)]
     pub struct MessageIdResponse {
         /// 消息ID（用于撤回等功能）
-        pub message_id: MessageID,
+        pub message_id: MessageId,
     }
     impl ProcedureCallResponse for MessageIdResponse {}
 
@@ -71,7 +71,7 @@ pub mod response {
     #[derive(Debug, Serialize, Deserialize)]
     pub struct LoginInfo {
         /// 当前登录的QQ号
-        pub user_id: UserID,
+        pub user_id: UserId,
         /// 当前登录的昵称
         pub nickname: String,
     }
@@ -96,7 +96,7 @@ pub mod response {
     #[derive(Debug, Serialize, Deserialize, ProcedureCall)]
     pub struct GroupInfo {
         /// 群号
-        pub group_id: GroupID,
+        pub group_id: GroupId,
         /// 群名称
         pub group_name: String,
         /// 当前成员数量
@@ -110,9 +110,9 @@ pub mod response {
     #[derive(Debug, Serialize, Deserialize, ProcedureCall)]
     pub struct GroupMemberInfo {
         /// 群号
-        pub group_id: GroupID,
+        pub group_id: GroupId,
         /// 用户QQ号
-        pub user_id: UserID,
+        pub user_id: UserId,
         /// 用户昵称
         pub nickname: String,
         /// 群名片
@@ -161,6 +161,11 @@ pub mod response {
         pub protocol_version: String,
     }
     impl ProcedureCallResponse for VersionInfo {}
+    
+    #[derive(Debug, Serialize, Deserialize, ProcedureCall)]
+    pub struct ForwardIdResponse(pub ForwardId);
+    impl ProcedureCallResponse for ForwardIdResponse {}
+
     impl From<api_internal::MessageIdResponse> for MessageIdResponse {
         fn from(i: api_internal::MessageIdResponse) -> Self {
             Self {
@@ -284,6 +289,12 @@ pub mod response {
             Self(i.0.into_iter().map(|x| x.into()).collect())
         }
     }
+    
+    impl From<api_internal::ForwardIdResponse> for ForwardIdResponse {
+        fn from(i: api_internal::ForwardIdResponse) -> Self {
+            Self(ForwardId(i.0))
+        }
+    }
 
     pub mod api_internal {
         use crate::message::message_internal::InternalMessage;
@@ -319,6 +330,7 @@ pub mod response {
             VersionInfo(VersionInfo),
             LoginInfo(LoginInfo),
             GroupMemberInfo(GroupMemberInfo),
+            ForwardIdResponse(ForwardIdResponse),
             Unknown(serde_json::Value),
         }
 
@@ -452,6 +464,9 @@ pub mod response {
             /// 协议版本（如v11）
             pub protocol_version: String,
         }
+        
+        #[derive(Debug, Serialize, Deserialize)]
+        pub struct ForwardIdResponse(pub String);
     }
 }
 
@@ -463,7 +478,7 @@ pub mod request {
     use serde::{Deserialize, Serialize};
 
     use super::error::ApiError;
-    use crate::message::{GroupID, MessageID, MessageNode, UserID, message_internal::InternalMessage};
+    use crate::message::{message_internal::{InternalForwardMessage, InternalMessage}, ForwardMessageNode, GroupId, MessageId, MessageNode, UserId};
 
     #[derive(Debug, Serialize, Deserialize, ProcedureCall)]
     pub struct NoneRequest;
@@ -519,6 +534,8 @@ pub mod request {
         GetGroupMemberInfo(GetGroupMemberInfoParams),
         #[serde(rename = "get_group_member_list")]
         GetGroupMemberList(GetGroupMemberListParams),
+        #[serde(rename = "send_forward_msg")]
+        CreateForwardMsg(CreateForwardMsgParams),
     }
 
     /// 发送私聊消息参数
@@ -532,7 +549,7 @@ pub mod request {
         type RESPONSE = Result<MessageIdResponse, ApiError>;
     }
     impl SendPrivateMsgParams {
-        pub fn new(user_id: UserID, message: Vec<MessageNode>) -> Result<Self, ApiError> {
+        pub fn new(user_id: UserId, message: Vec<MessageNode>) -> Result<Self, ApiError> {
             let message = message.into_iter().map(|x| x.into()).collect();
             Ok(Self {
                 user_id: user_id.into(),
@@ -558,7 +575,7 @@ pub mod request {
         /// # 参数
         /// - `group_id`: 目标群号
         /// - `message`: 消息内容
-        pub fn new(group_id: GroupID, message: Vec<MessageNode>) -> Result<Self, ApiError> {
+        pub fn new(group_id: GroupId, message: Vec<MessageNode>) -> Result<Self, ApiError> {
             let message = message.into_iter().map(|x| x.into()).collect();
             Ok(Self {
                 group_id: group_id.into(),
@@ -581,7 +598,7 @@ pub mod request {
         ///
         /// # 参数
         /// - `message_id`: 要撤回的消息ID
-        pub fn new(message_id: MessageID) -> Result<Self, ParseIntError> {
+        pub fn new(message_id: MessageId) -> Result<Self, ParseIntError> {
             Ok(Self {
                 message_id: message_id.0.parse()?,
             })
@@ -601,7 +618,7 @@ pub mod request {
         ///
         /// # 参数
         /// - `message_id`: 目标消息ID
-        pub fn new(message_id: MessageID) -> Result<Self, ParseIntError> {
+        pub fn new(message_id: MessageId) -> Result<Self, ParseIntError> {
             Ok(Self {
                 message_id: message_id.0.parse()?,
             })
@@ -626,8 +643,8 @@ pub mod request {
         /// - `user_id`: 被踢用户QQ号
         /// - `reject_add_request`: 是否拒绝后续加群
         pub fn new(
-            group_id: GroupID,
-            user_id: UserID,
+            group_id: GroupId,
+            user_id: UserId,
             reject_add_request: bool,
         ) -> Result<Self, ParseIntError> {
             Ok(Self {
@@ -656,8 +673,8 @@ pub mod request {
         /// - `user_id`: 被禁言用户QQ号
         /// - `duration`: 禁言时长（秒）
         pub fn new(
-            group_id: GroupID,
-            user_id: UserID,
+            group_id: GroupId,
+            user_id: UserId,
             duration: i32,
         ) -> Result<Self, ParseIntError> {
             Ok(Self {
@@ -686,8 +703,8 @@ pub mod request {
         /// - `user_id`: 用户QQ号
         /// - `enable`: 是否设置为管理员
         pub fn new(
-            group_id: GroupID,
-            user_id: UserID,
+            group_id: GroupId,
+            user_id: UserId,
             enable: bool,
         ) -> Result<Self, ParseIntError> {
             Ok(Self {
@@ -716,8 +733,8 @@ pub mod request {
         /// - `user_id`: 用户QQ号
         /// - `card`: 新群名片
         pub fn new(
-            group_id: GroupID,
-            user_id: UserID,
+            group_id: GroupId,
+            user_id: UserId,
             card: String,
         ) -> Result<Self, ParseIntError> {
             Ok(Self {
@@ -743,7 +760,7 @@ pub mod request {
         /// # 参数
         /// - `group_id`: 目标群号
         /// - `is_dismiss`: 是否解散群
-        pub fn new(group_id: GroupID, is_dismiss: bool) -> Result<Self, ParseIntError> {
+        pub fn new(group_id: GroupId, is_dismiss: bool) -> Result<Self, ParseIntError> {
             Ok(Self {
                 group_id: group_id.into(),
                 is_dismiss,
@@ -849,7 +866,7 @@ pub mod request {
         /// # 参数
         /// - `group_id`: 目标群号
         /// - `no_cache`: 是否不使用缓存
-        pub fn new(group_id: GroupID, no_cache: bool) -> Result<Self, ParseIntError> {
+        pub fn new(group_id: GroupId, no_cache: bool) -> Result<Self, ParseIntError> {
             Ok(Self {
                 group_id: group_id.into(),
                 no_cache,
@@ -875,8 +892,8 @@ pub mod request {
         /// - `user_id`: 成员QQ号
         /// - `no_cache`: 是否不使用缓存
         pub fn new(
-            group_id: GroupID,
-            user_id: UserID,
+            group_id: GroupId,
+            user_id: UserId,
             no_cache: bool,
         ) -> Result<Self, ParseIntError> {
             Ok(Self {
@@ -900,10 +917,23 @@ pub mod request {
         ///
         /// # 参数
         /// - `group_id`: 目标群号
-        pub fn new(group_id: GroupID) -> Result<Self, ParseIntError> {
+        pub fn new(group_id: GroupId) -> Result<Self, ParseIntError> {
             Ok(Self {
                 group_id: group_id.into(),
             })
+        }
+    }
+    
+    #[derive(Debug, Serialize, Deserialize, ProcedureCall)]
+    pub struct CreateForwardMsgParams {
+        messages: Vec<InternalForwardMessage>,
+    }
+    impl ProcedureCallRequest for CreateForwardMsgParams {
+        type RESPONSE = Result<ForwardIdResponse, ApiError>;
+    }
+    impl CreateForwardMsgParams {
+        pub fn new(messages: Vec<ForwardMessageNode>) -> Self {
+            Self { messages: messages.into_iter().map(|message| message.into()).collect() }
         }
     }
 
@@ -994,6 +1024,12 @@ pub mod request {
     impl From<GetGroupMemberListParams> for ApiRequestKind {
         fn from(value: GetGroupMemberListParams) -> Self {
             Self::GetGroupMemberList(value)
+        }
+    }
+    
+    impl From<CreateForwardMsgParams> for ApiRequestKind {
+        fn from(value: CreateForwardMsgParams) -> Self {
+            Self::CreateForwardMsg(value)
         }
     }
 }

@@ -23,11 +23,12 @@ pub const SUBSCRIBERS: &[Subscriber<ClientState>] = &[
     create_subscriber!(api_get_group_member_info),
     create_subscriber!(api_get_group_member_list),
     create_subscriber!(api_get_msg),
+    create_subscriber!(api_create_forward_msg),
     create_subscriber!(log_subscriber),
     create_subscriber!(tracing_subscriber),
 ];
 
 #[ioevent::subscriber]
 pub async fn tracing_subscriber(event: EventData) {
-    log::debug!("tracing_subscriber: {:?}", event);
+    log::trace!("tracing_subscriber: {:?}", event);
 }
