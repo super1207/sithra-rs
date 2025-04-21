@@ -1,6 +1,6 @@
 use ioevent::rpc::{DefaultProcedureWright, ProcedureCallWright};
 
-pub trait SithraState: ProcedureCallWright {
+pub trait SithraState: ProcedureCallWright + Clone + Send + Sync + 'static {
     fn self_id(&self) -> u64;
     fn create(self_id: u64) -> Self;
 }

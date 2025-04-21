@@ -39,7 +39,9 @@ async fn main() -> anyhow::Result<()> {
             child.arg(config.base.self_id.to_string());
             let io: IoPair<_, _> = child.try_into()?;
             builder.add_pair(io);
-            info!(target: "plugin_loader", "成功加载插件: {:?}", path.file_name().unwrap().to_str());
+            if let Some(Some(name)) = path.file_name().map(|s| s.to_str()) {
+                info!(target: "plugin_loader", "成功加载插件: {}", name);
+            }
         }
     }
 
@@ -53,12 +55,12 @@ async fn main() -> anyhow::Result<()> {
         &join_url(&config.base.ws_url, "event/"),
         &join_url(&config.base.ws_url, "api/"),
         wright,
-        config.base.self_id
+        config.base.self_id,
     )
     .await?;
 
     log::info!("成功连接到 WebSocket 服务器");
-    
+
     let cancel_token = CancellationToken::new();
 
     let cancel_token_clone = cancel_token.clone();
