@@ -408,7 +408,7 @@ dependencies = [
 [[package]]
 name = "ioevent"
 version = "0.1.0-rc.2"
-source = "git+https://github.com/BERADQ/ioevent.git#314e1a88e6e89d8f1020af61f91c047700ca27ef"
+source = "git+https://github.com/BERADQ/ioevent.git#bbd8665948997237a72234d033248b1d4fdf1614"
 dependencies = [
  "channels",
  "ciborium",
@@ -426,7 +426,7 @@ dependencies = [
 [[package]]
 name = "ioevent_macro"
 version = "0.1.0-rc.2"
-source = "git+https://github.com/BERADQ/ioevent.git#314e1a88e6e89d8f1020af61f91c047700ca27ef"
+source = "git+https://github.com/BERADQ/ioevent.git#bbd8665948997237a72234d033248b1d4fdf1614"
 dependencies = [
  "quote",
  "syn",

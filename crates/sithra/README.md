@@ -66,7 +66,7 @@ async fn main(_effect_wright: &ioevent::EffectWright) {
 
 `sithra-rs` 的一切都离不开 [`ioevent`](https://github.com/BERADQ/ioevent)。
 
-对于插件开发的一些基本知识，请参阅 [`ioevent` doc](https://docs.rs/ioevent/latest/ioevent/) **(过时)**。
+对于插件开发的一些基本知识，请参阅 [`ioevent` doc](https://docs.rs/ioevent/latest/ioevent/) **(0.1.0-rc.2)**。
 
 [待补充]
 
