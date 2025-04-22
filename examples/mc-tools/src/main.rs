@@ -3,8 +3,6 @@ mod skin; // 用于查询玩家皮肤
 use mcmod::*;
 use skin::*;
 
-use base64::{Engine, prelude::BASE64_STANDARD};
-use event::MessageEventFlattened as Message;
 use ioevent::{
     prelude::*,
     rpc::{DefaultProcedureWright, ProcedureCallWright},
