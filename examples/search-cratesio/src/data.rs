@@ -1,4 +1,4 @@
-use std::fmt::format;
+use std::result;
 
 use scraper::{Html, Selector};
 use serde::Deserialize;
@@ -40,7 +40,10 @@ impl CratesioSearchResult {
     pub fn to_forward_message(&self, user_id: UserId) -> Vec<ForwardMessageNode> {
         let mut nodes = Vec::new();
         let total = self.total();
-        let total_str = format!("一共找到了 {} 个结果捏，15 喵内回复编号可以查看具体信息哦", total);
+        let total_str = format!(
+            "一共找到了 {} 个结果捏，15 喵内回复编号可以查看具体信息哦",
+            total
+        );
         let total_message = MessageNode::Text(total_str);
         let total_node =
             ForwardMessageNode::new(user_id.clone(), "total".to_string(), vec![total_message]);
@@ -61,10 +64,10 @@ impl CratesioSearchResult {
         }
         let (has_next, has_prev) = (self.has_next_page(), self.has_prev_page());
         let page_str = match (has_next, has_prev) {
-            (true, true) => "回复[P/N]可以查看 上一页/下一页 哦",
-            (true, false) => "回复[N]可以查看 下一页 哦",
-            (false, true) => "回复[P]可以查看 上一页 哦",
-            (false, false) => "没有更多页了捏",
+            (true, true) => "回复[P/N]可以查看[上一页/下一页]喵",
+            (true, false) => "回复[N]可以查看[下一页]喵",
+            (false, true) => "回复[P]可以查看[上一页]喵",
+            (false, false) => "没有更多了捏",
         };
         let page_message = MessageNode::Text(page_str.to_string());
         let page_node =
@@ -74,14 +77,17 @@ impl CratesioSearchResult {
         nodes
     }
 
-    pub async fn get_n_crate_readme(&self, n: usize) -> Option<String> {
+    pub async fn get_n_crate_readme(&self, n: usize) -> Option<Vec<MessageNode>> {
         let scrate = self.crates.get(n - 1)?;
         let readme = api::get_readme(scrate).await.ok()?;
         let doc = Html::parse_document(&readme);
         let selector = Selector::parse(":root > *").ok()?;
         let result = doc.select(&selector);
-        let result = result.fold(String::new(), |mut acc, e| {
-            acc.push_str(e.text().collect::<Vec<_>>().join(" ").as_str());
+        let result = result.fold(Vec::new(), |mut acc, e| {
+            let text = e.text().collect::<Vec<_>>().join(" ").as_str().to_string();
+            if !text.is_empty() {
+                acc.push(MessageNode::Text(text));
+            }
             acc
         });
         Some(result)
@@ -100,10 +106,11 @@ impl CratesioSearchResult {
             scrate.name, scrate.newest_version
         ));
         messages.push(message);
-        let message = MessageNode::Text(readme);
-        messages.push(message);
-        let node = ForwardMessageNode::new(user_id.clone(), format!("{}", user_id.0), messages);
-        Some(vec![node])
+        messages.extend(readme);
+        let result = messages.into_iter().map(|msg| {
+            ForwardMessageNode::new(user_id.clone(), format!("{}", user_id.0), vec![msg])
+        });
+        Some(result.collect())
     }
 }
 
