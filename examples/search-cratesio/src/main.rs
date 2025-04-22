@@ -162,6 +162,7 @@ pub async fn search_cratesio(state: State<CommonState>, msg: Message) -> Result 
                     .await?;
                 } */
                 if let Some(url) = result.get_n_page_url(i) {
+                    log::debug!("尝试网页截图: {}", url);
                     let screenshot_params = TakeScreenshot {
                         url,
                         selector: None,
