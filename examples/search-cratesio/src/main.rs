@@ -6,13 +6,13 @@ use std::time::Duration;
 
 use ioevent::error::CallSubscribeError;
 use ioevent::rpc::ProcedureCallExt;
-use ioevent::{Event, State, subscriber};
+use ioevent::{Event, State, create_subscriber, subscriber};
 use log::info;
 use sithra_common::event::MessageEventFlattened as Message;
 use sithra_common::prelude::*;
 use tokio::time::timeout;
 
-const SUBSCRIBERS: &[ioevent::Subscriber<CommonState>] = &[];
+const SUBSCRIBERS: &[ioevent::Subscriber<CommonState>] = &[create_subscriber!(search_cratesio)];
 
 enum Action {
     PrevPage,
@@ -33,10 +33,7 @@ impl Action {
 
 // TODO: 搜索 crates.io 上的包
 #[subscriber]
-pub async fn search_cratesio(
-    state: State<CommonState>,
-    msg: Message,
-) -> Result<(), CallSubscribeError> {
+pub async fn search_cratesio(state: State<CommonState>, msg: Message) -> Result {
     // 检查消息是否以 "crate " 开头
     if !msg.starts_with("crate ") {
         return Ok(());
