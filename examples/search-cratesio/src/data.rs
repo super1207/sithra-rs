@@ -40,7 +40,7 @@ impl CratesioSearchResult {
     pub fn to_forward_message(&self, user_id: UserId) -> Vec<ForwardMessageNode> {
         let mut nodes = Vec::new();
         let total = self.total();
-        let total_str = format!("一共找到了 {} 个结果捏，回复编号可以查看具体信息哦", total);
+        let total_str = format!("一共找到了 {} 个结果捏，15 喵内回复编号可以查看具体信息哦", total);
         let total_message = MessageNode::Text(total_str);
         let total_node =
             ForwardMessageNode::new(user_id.clone(), "total".to_string(), vec![total_message]);
