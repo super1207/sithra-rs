@@ -7,6 +7,8 @@ pub mod message_internal {
 use internal::*;
 use serde::{Deserialize, Serialize};
 
+use crate::api::ForwardIdResponse;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ForwardId(pub String);
 
@@ -279,6 +281,14 @@ pub struct Forward {
 impl From<ForwardId> for Forward {
     fn from(value: ForwardId) -> Self {
         Self { id: value }
+    }
+}
+
+impl From<ForwardIdResponse> for Forward {
+    fn from(value: ForwardIdResponse) -> Self {
+        Self {
+            id: value.0,
+        }
     }
 }
 

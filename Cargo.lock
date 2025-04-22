@@ -364,7 +364,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "976dd42dc7e85965fe702eb8164f21f450704bdde31faefd6471dba214cb594e"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -509,6 +509,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c31b6d751ae2c7f11320402d34e41349dd1016f8d5d45e48c4312bc8625af50c"
 dependencies = [
  "byteorder",
+]
+
+[[package]]
+name = "game-24p"
+version = "0.1.0"
+dependencies = [
+ "ioevent",
+ "log",
+ "sithra_common",
+ "tokio",
 ]
 
 [[package]]
@@ -868,7 +878,7 @@ dependencies = [
 [[package]]
 name = "ioevent"
 version = "0.1.0-rc.2"
-source = "git+https://github.com/BERADQ/ioevent.git#212b901e74aad98bb90fff5427d1f5cdf852ca4c"
+source = "git+https://github.com/BERADQ/ioevent.git#f2c51ca23edd5b19ffb1d449f5882068eeefbfd7"
 dependencies = [
  "channels",
  "ciborium",
@@ -886,7 +896,7 @@ dependencies = [
 [[package]]
 name = "ioevent_macro"
 version = "0.1.0-rc.2"
-source = "git+https://github.com/BERADQ/ioevent.git#212b901e74aad98bb90fff5427d1f5cdf852ca4c"
+source = "git+https://github.com/BERADQ/ioevent.git#f2c51ca23edd5b19ffb1d449f5882068eeefbfd7"
 dependencies = [
  "quote",
  "syn",
@@ -1415,7 +1425,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1496,6 +1506,20 @@ dependencies = [
  "precomputed-hash",
  "selectors",
  "tendril",
+]
+
+[[package]]
+name = "search-cratesio"
+version = "0.1.0"
+dependencies = [
+ "ioevent",
+ "log",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sithra_common",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]
@@ -1809,7 +1833,7 @@ dependencies = [
  "getrandom 0.3.2",
  "once_cell",
  "rustix",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]

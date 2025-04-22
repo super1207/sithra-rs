@@ -222,35 +222,19 @@ impl SearchModResultExt for Vec<SearchModResult> {
 #[derive(Debug, Error)]
 pub enum McModError {
     #[error("request error: {0}")]
-    RequestError(reqwest::Error),
+    RequestError(#[from] reqwest::Error),
     #[error("selector error: {0}")]
     SelectorError(String),
     #[error("api error: {0}")]
-    ApiError(ApiError),
+    ApiError(#[from] ApiError),
     #[error("call subscribe error: {0}")]
-    CallSubscribeError(CallSubscribeError),
+    CallSubscribeError(#[from] CallSubscribeError),
     #[error("index out of bounds: {0}")]
     IndexOutOfBounds(usize),
-    #[error("invalid input: {0}")]
-    InvalidInput(String),
 }
-impl From<reqwest::Error> for McModError {
-    fn from(err: reqwest::Error) -> Self {
-        McModError::RequestError(err)
-    }
-}
+
 impl<'a> From<scraper::error::SelectorErrorKind<'a>> for McModError {
-    fn from(err: scraper::error::SelectorErrorKind) -> Self {
+    fn from(err: scraper::error::SelectorErrorKind<'a>) -> Self {
         McModError::SelectorError(err.to_string())
-    }
-}
-impl From<ApiError> for McModError {
-    fn from(err: ApiError) -> Self {
-        McModError::ApiError(err)
-    }
-}
-impl From<CallSubscribeError> for McModError {
-    fn from(err: CallSubscribeError) -> Self {
-        McModError::CallSubscribeError(err)
     }
 }
