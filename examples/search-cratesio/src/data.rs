@@ -81,10 +81,10 @@ impl CratesioSearchResult {
         let scrate = self.crates.get(n - 1)?;
         let readme = api::get_readme(scrate).await.ok()?;
         let doc = Html::parse_document(&readme);
-        let selector = Selector::parse(":root > *").ok()?;
+        let selector = Selector::parse("body > *").ok()?;
         let result = doc.select(&selector);
         let result = result.fold(Vec::new(), |mut acc, e| {
-            let text = e.text().collect::<Vec<_>>().join(" ").as_str().to_string();
+            let text = e.text().collect::<Vec<_>>().join(" ").as_str().trim().to_string();
             if !text.is_empty() {
                 acc.push(MessageNode::Text(text));
             }
