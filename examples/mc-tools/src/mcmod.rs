@@ -45,57 +45,47 @@ pub async fn search_mcmod(s: State<McToolsState>, msg: Message) -> Result {
 
     let sender_id = msg.sender.user_id;
     let next = s
-        .wait_next_with(move |e| {
-            let is_message = (Message::SELECTOR.0)(e);
+        .wait_next(move |e| {
+            let is_message = Message::SELECTOR.match_event(e);
             if !is_message {
-                return false;
+                return None;
             }
 
             let message = match Message::try_from(e) {
                 Ok(message) => message,
-                Err(_) => return false,
+                Err(_) => return None,
             };
 
-            message.sender.user_id == sender_id
+            if message.sender.user_id == sender_id {
+                if message.message.len() != 1 {
+                    return None;
+                }
+                match message.first() {
+                    Some(MessageNode::Text(text)) => text.parse::<usize>().ok(),
+                    _ => None,
+                }
+            } else {
+                None
+            }
         })
         .await;
 
-    let next = match timeout(Duration::from_secs(10), next).await {
+    let next = match timeout(Duration::from_secs(15), next).await {
         Ok(next) => next?,
         Err(_) => {
             msg.reply(&s, vec![MessageNode::Text("超时了捏。".to_string())])
                 .await?;
+            let del = DeleteMsgParams::new(forward_msg.message_id);
+            if let Ok(del) = del {
+                if let Err(e) = s.call(&del).await {
+                    log::error!("mcmod 撤回消息失败: {}", e);
+                }
+            }
             return Ok(());
         }
     };
 
-    let event = Message::try_from(&next)?;
-    if event.message.len() != 1 {
-        return Ok(());
-    }
-
-    let message = event.message.first().unwrap();
-    let text = match message {
-        MessageNode::Text(text) => Ok(text),
-        _ => Err(McModError::InvalidInput(format!(
-            "{:?} is not a number",
-            message
-        ))),
-    };
-
-    let id = match text.map(|s| s.parse::<usize>()) {
-        Ok(Ok(id)) => Ok(id),
-        Err(e) => Err(e),
-        Ok(Err(e)) => Err(McModError::InvalidInput(e.to_string())),
-    };
-
-    let result = match id {
-        Ok(id) => Some(result.get_content(id - 1, s.self_id().into()).await),
-        Err(e) => {
-            log::error!("mcmod 获取内容失败: {}", e);
-            None
-        }
-    };
+    let result = result.get_content(next - 1, s.self_id().into()).await;
 
     let del = DeleteMsgParams::new(forward_msg.message_id);
     if let Ok(del) = del {
@@ -105,24 +95,21 @@ pub async fn search_mcmod(s: State<McToolsState>, msg: Message) -> Result {
     }
 
     match result {
-        Some(Ok(content)) => {
+        Ok(content) => {
             let forward = CreateForwardMsgParams::new(content);
             let forward_id = s.call(&forward).await??;
-            event.reply(&s, vec![MessageNode::Forward(forward_id.0.into())])
+            msg.reply(&s, vec![MessageNode::Forward(forward_id.0.into())])
                 .await?;
         }
-        Some(Err(e)) => {
+        Err(e) => {
             log::error!("mcmod 获取 URL 失败: {}", e);
-            event
-                .reply(
-                    &s,
-                    vec![MessageNode::Text("坏了，村里断网了。".to_string())],
-                )
-                .await?;
-        }
-        None => {
-            event.reply(&s, vec![MessageNode::Text("你是不是输入了奇怪的东西捏？".to_string())])
-                .await?;
+            msg.reply(
+                &s,
+                vec![MessageNode::Text(
+                    "诶呀？好像是索引太大，没有这个东西捏。".to_string(),
+                )],
+            )
+            .await?;
         }
     };
 
