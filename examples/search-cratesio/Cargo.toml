@@ -13,3 +13,5 @@ serde_json.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 scraper.workspace = true
+
+sithra_headless_common = { git = "https://github.com/SithraBot/sithra-rs-headless.git" }

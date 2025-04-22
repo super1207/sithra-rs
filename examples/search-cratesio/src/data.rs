@@ -84,7 +84,13 @@ impl CratesioSearchResult {
         let selector = Selector::parse("body > *").ok()?;
         let result = doc.select(&selector);
         let result = result.fold(Vec::new(), |mut acc, e| {
-            let text = e.text().collect::<Vec<_>>().join(" ").as_str().trim().to_string();
+            let text = e
+                .text()
+                .collect::<Vec<_>>()
+                .join(" ")
+                .as_str()
+                .trim()
+                .to_string();
             if !text.is_empty() {
                 acc.push(MessageNode::Text(text));
             }
@@ -111,6 +117,15 @@ impl CratesioSearchResult {
             ForwardMessageNode::new(user_id.clone(), format!("{}", user_id.0), vec![msg])
         });
         Some(result.collect())
+    }
+
+    pub fn get_n_page_url(&self, n: usize) -> Option<String> {
+        let page = self.crates.get(n - 1)?;
+        let url = format!(
+            "https://crates.io/crates/{}/{}",
+            page.id, page.newest_version
+        );
+        Some(url)
     }
 }
 
