@@ -1,3 +1,6 @@
+use std::fmt::format;
+
+use scraper::{Html, Selector};
 use serde::Deserialize;
 use sithra_common::prelude::{ForwardMessageNode, MessageNode, UserId};
 
@@ -74,7 +77,14 @@ impl CratesioSearchResult {
     pub async fn get_n_crate_readme(&self, n: usize) -> Option<String> {
         let scrate = self.crates.get(n - 1)?;
         let readme = api::get_readme(scrate).await.ok()?;
-        Some(readme)
+        let doc = Html::parse_document(&readme);
+        let selector = Selector::parse(":root > *").ok()?;
+        let result = doc.select(&selector);
+        let result = result.fold(String::new(), |mut acc, e| {
+            acc.push_str(e.text().collect::<Vec<_>>().join(" ").as_str());
+            acc
+        });
+        Some(result)
     }
 
     pub async fn get_n_crate_readme_forward(
@@ -83,9 +93,16 @@ impl CratesioSearchResult {
         n: usize,
     ) -> Option<Vec<ForwardMessageNode>> {
         let readme = self.get_n_crate_readme(n).await?;
+        let scrate = self.crates.get(n - 1)?;
+        let mut messages = Vec::new();
+        let message = MessageNode::Text(format!(
+            "包名: {}\n版本: {}",
+            scrate.name, scrate.newest_version
+        ));
+        messages.push(message);
         let message = MessageNode::Text(readme);
-        let node =
-            ForwardMessageNode::new(user_id.clone(), format!("{}", user_id.0), vec![message]);
+        messages.push(message);
+        let node = ForwardMessageNode::new(user_id.clone(), format!("{}", user_id.0), messages);
         Some(vec![node])
     }
 }

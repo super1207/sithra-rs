@@ -1515,6 +1515,7 @@ dependencies = [
  "ioevent",
  "log",
  "reqwest",
+ "scraper",
  "serde",
  "serde_json",
  "sithra_common",

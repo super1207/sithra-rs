@@ -136,6 +136,7 @@ pub async fn search_cratesio(state: State<CommonState>, msg: Message) -> Result 
             Action::Timeout => {
                 msg.reply(&state, vec![MessageNode::Text("操作超时捏。".to_string())])
                     .await?;
+                delete_previous_message(&state, &prev_output).await?;
                 break;
             }
 
