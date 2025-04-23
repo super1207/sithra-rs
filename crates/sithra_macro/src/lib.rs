@@ -62,6 +62,12 @@ pub fn main(args: TokenStream, input: TokenStream) -> TokenStream {
 
             let handle_bus = bus.run(state, &|e| {
                 ::log::error!("总线错误: {:?}", e);
+                match e {
+                    ::ioevent::error::BusError::BusRecv(ioevent::error::BusRecvError::Recv(ioevent::error::RecvError::Io(_))) => {
+                        ::std::process::exit(1);
+                    }
+                    _ => {}
+                }
             }).await;
 
             let handle_main_loop = tokio::spawn(async move {
