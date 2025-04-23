@@ -1706,7 +1706,7 @@ dependencies = [
 [[package]]
 name = "sithra_headless_common"
 version = "0.1.0"
-source = "git+https://github.com/SithraBot/sithra-rs-headless.git#b43ae903689454dee983dea9540f6d0d413a9133"
+source = "git+https://github.com/SithraBot/sithra-rs-headless.git#a98d2b91b415dffced4e1c673350b49a42601081"
 dependencies = [
  "ioevent",
  "serde",
