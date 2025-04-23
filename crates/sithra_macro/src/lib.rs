@@ -69,12 +69,17 @@ pub fn main(args: TokenStream, input: TokenStream) -> TokenStream {
                     _ => {}
                 }
             }).await;
+            
+            let (_, close_handle) = handle_bus.spawn();
 
             let handle_main_loop = tokio::spawn(async move {
                 _main(&wright).await;
             });
 
-            handle_bus.join().await;
+            ::tokio::signal::ctrl_c().await;
+            close_handle.close();
+            handle_main_loop.abort();
+            ::std::process::exit(0);
         }
         #[doc(hidden)]
         #output

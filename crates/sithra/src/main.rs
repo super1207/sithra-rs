@@ -113,7 +113,9 @@ async fn main() -> anyhow::Result<()> {
             _ = tokio::signal::ctrl_c() => {
                 log::info!("正在关闭...");
                 for mut child in childs {
-                    child.kill().await?;
+                    while let None = child.try_wait()? {
+                        let _ = child.start_kill();
+                    }
                 }
                 cancel_token.cancel();
                 msg_receiver_handle.abort();
