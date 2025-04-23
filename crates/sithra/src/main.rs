@@ -3,7 +3,7 @@ mod config;
 mod subscribers;
 mod util;
 
-use std::env;
+use std::{env, process::Stdio};
 
 use client::*;
 use config::Config;
@@ -34,14 +34,23 @@ async fn main() -> anyhow::Result<()> {
     let plugin_path = current_dir.join("plugins");
     fs::create_dir_all(&plugin_path).await?;
 
+    let mut childs = Vec::new();
+
     let mut plugin_dir = fs::read_dir(plugin_path).await?;
     while let Some(entry) = plugin_dir.next_entry().await? {
         let path = entry.path();
         if path.is_file() {
             let mut child = Command::new(&path);
             child.arg(config.base.self_id.to_string());
-            let io: IoPair<_, _> = child.try_into()?;
+            child.stdout(Stdio::piped());
+            child.stdin(Stdio::piped());
+            let mut child = child.spawn()?;
+            let io: IoPair<_, _> = IoPair {
+                reader: child.stdout.take().unwrap(),
+                writer: child.stdin.take().unwrap(),
+            };
             builder.add_pair(io);
+            childs.push(child);
             if let Some(Some(name)) = path.file_name().map(|s| s.to_str()) {
                 info!(target: "plugin_loader", "成功加载插件: {}", name);
             }
@@ -96,13 +105,16 @@ async fn main() -> anyhow::Result<()> {
             }
         })
         .await;
-    let (join_handle, close_handle) = bus_handle.spawn();
+    let (_, close_handle) = bus_handle.spawn();
 
     loop {
         select! {
             _ = tick_api_receiver(&state_clone, &mut api_receiver) => {}
             _ = tokio::signal::ctrl_c() => {
                 log::info!("正在关闭...");
+                for mut child in childs {
+                    child.kill().await?;
+                }
                 cancel_token.cancel();
                 msg_receiver_handle.abort();
                 api_sender_handle.abort();
@@ -111,6 +123,5 @@ async fn main() -> anyhow::Result<()> {
             }
         }
     }
-    join_handle.await.unwrap();
     Ok(())
 }
