@@ -165,7 +165,7 @@ pub async fn search_cratesio(state: State<CommonState>, msg: Message) -> Result 
                     log::debug!("尝试网页截图: {}", url);
                     let screenshot_params = TakeScreenshot {
                         url,
-                        selector: None,
+                        selector: Some("[class^=\"_docs\"]".to_string()),
                     };
                     let img = state.call(&screenshot_params).await?;
                     let img_url = format!("file://{}", img.file_path);
