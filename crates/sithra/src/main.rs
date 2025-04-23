@@ -7,7 +7,10 @@ use std::env;
 
 use client::*;
 use config::Config;
-use ioevent::prelude::*;
+use ioevent::{
+    error::{BusError, BusRecvError},
+    prelude::*,
+};
 use log::*;
 use subscribers::SUBSCRIBERS;
 use tokio::{fs, process::Command, select};
@@ -85,6 +88,12 @@ async fn main() -> anyhow::Result<()> {
     let bus_handle = bus
         .run(state, &|e| {
             error!("总线错误: {:?}", e);
+            match e {
+                BusError::BusRecv(BusRecvError::Recv(ioevent::error::RecvError::Io(_))) => {
+                    std::process::exit(1);
+                }
+                _ => {}
+            }
         })
         .await;
     let (join_handle, close_handle) = bus_handle.spawn();
