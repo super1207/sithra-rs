@@ -25,6 +25,7 @@ log = "0.4.27"
 # Examples Extrenal crates
 reqwest = { version = "0.12.15", features = ["json"] }
 scraper = { version = "0.23.1", default-features = false }
+sithra_headless_common = { git = "https://github.com/SithraBot/sithra-rs-headless.git" }
 
 [profile.dev]
 split-debuginfo = "unpacked"

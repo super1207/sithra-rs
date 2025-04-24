@@ -11,5 +11,6 @@ log.workspace = true
 thiserror.workspace = true
 reqwest.workspace = true
 scraper.workspace = true
+sithra_headless_common.workspace = true
 bytes = "1.10.1"
 base64 = "0.22.1"

@@ -26,7 +26,9 @@ impl Action {
     pub fn parse(text: &str) -> Option<Self> {
         match text {
             "N" => Some(Self::NextPage),
+            "n" => Some(Self::NextPage),
             "P" => Some(Self::PrevPage),
+            "p" => Some(Self::PrevPage),
             str => str.parse::<usize>().map(Self::GetCrate).ok(),
         }
     }
@@ -164,6 +166,7 @@ pub async fn search_cratesio(state: State<CommonState>, msg: Message) -> Result 
                 if let Some(url) = result.get_n_page_url(i) {
                     log::debug!("尝试网页截图: {}", url);
                     let screenshot_params = TakeScreenshot {
+                        preprocess_script: None,
                         url,
                         selector: Some("[class^=\"_docs\"]".to_string()),
                     };

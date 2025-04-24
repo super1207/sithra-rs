@@ -1007,6 +1007,7 @@ dependencies = [
  "reqwest",
  "scraper",
  "sithra_common",
+ "sithra_headless_common",
  "thiserror",
  "tokio",
 ]
@@ -1706,7 +1707,7 @@ dependencies = [
 [[package]]
 name = "sithra_headless_common"
 version = "0.1.0"
-source = "git+https://github.com/SithraBot/sithra-rs-headless.git#675844e445503772b4486828785ab96b9464fec1"
+source = "git+https://github.com/SithraBot/sithra-rs-headless.git#1ca93514627bb4344eb603cee321b99a61d1b26f"
 dependencies = [
  "ioevent",
  "serde",

@@ -10,6 +10,7 @@ pub struct CratesioSearchResult {
     pub meta: CratesioSearchMeta,
 }
 
+#[allow(unused)]
 impl CratesioSearchResult {
     pub fn is_empty(&self) -> bool {
         self.crates.is_empty()
