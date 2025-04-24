@@ -58,7 +58,7 @@ pub fn main(args: TokenStream, input: TokenStream) -> TokenStream {
             let (bus, wright) = builder.build();
             ::sithra_common::log::init_log(wright.clone(), ::log::LevelFilter::Info);
             ::log::set_max_level(::log::LevelFilter::Trace);
-            let state = ::ioevent::State::new(<#state_type as ::sithra_common::state::SithraState>::create(self_id), wright.clone());
+            let state = ::ioevent::State::new(<#state_type as ::sithra_common::state::SithraState>::create(self_id).await, wright.clone());
 
             let handle_bus = bus.run(state, &|e| {
                 ::log::error!("总线错误: {:?}", e);
@@ -76,7 +76,7 @@ pub fn main(args: TokenStream, input: TokenStream) -> TokenStream {
                 _main(&wright).await;
             });
 
-            ::tokio::signal::ctrl_c().await;
+            let _ = ::tokio::signal::ctrl_c().await;
             close_handle.close();
             handle_main_loop.abort();
             ::std::process::exit(0);

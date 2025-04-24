@@ -24,7 +24,7 @@ struct McToolsState {
     pcw: DefaultProcedureWright,
 }
 impl SithraState for McToolsState {
-    fn create(self_id: u64) -> Self {
+    async fn create(self_id: u64) -> Self {
         Self {
             self_id,
             pcw: DefaultProcedureWright::default(),

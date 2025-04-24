@@ -2,7 +2,7 @@ use ioevent::rpc::{DefaultProcedureWright, ProcedureCallWright};
 
 pub trait SithraState: ProcedureCallWright + Clone + Send + Sync + 'static {
     fn self_id(&self) -> u64;
-    fn create(self_id: u64) -> Self;
+    fn create(self_id: u64) -> impl Future<Output = Self>;
 }
 
 #[derive(Clone)]
@@ -14,7 +14,7 @@ impl SithraState for CommonState {
     fn self_id(&self) -> u64 {
         self.self_id
     }
-    fn create(self_id: u64) -> Self {
+    async fn create(self_id: u64) -> Self {
         Self {
             self_id,
             pcw: DefaultProcedureWright::default(),
