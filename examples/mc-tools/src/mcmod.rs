@@ -163,7 +163,7 @@ pub async fn search_mcmod(state: State<McToolsState>, msg: Message) -> Result {
                     log::debug!("尝试网页截图: {}", url);
                     let screenshot_params = TakeScreenshot {
                         preprocess_script: Some(
-                            "document.querySelector(\".common-text\").style.margin = \"15px\";"
+                            "document.querySelector(\".common-text\").style.padding = \"15px\";"
                                 .to_string(),
                         ),
                         url,
@@ -212,6 +212,7 @@ pub struct SearchModResult {
     pub name: String,
 }
 
+#[allow(unused)]
 impl SearchModData {
     pub async fn get_from_url(url: &str) -> Result<Self, McModError> {
         let resp = reqwest::get(url).await?;
@@ -273,7 +274,7 @@ impl SearchModData {
     }
     fn to_forward_message(&self, user_id: UserId) -> Vec<ForwardMessageNode> {
         let mut msg = Vec::new();
-        let total = format!("一共搜索到了 {} 个结果喵。", self.results.len());
+        let total = format!("当前页有 {} 个结果喵。", self.results.len());
         msg.push(ForwardMessageNode::new(
             user_id.clone(),
             "".to_string(),
@@ -304,7 +305,7 @@ impl SearchModData {
     fn get_url(&self, id: usize) -> Result<String, McModError> {
         Ok(self
             .results
-            .get(id)
+            .get(id - 1)
             .ok_or(McModError::IndexOutOfBounds(id))?
             .url
             .clone())
