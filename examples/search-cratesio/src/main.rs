@@ -32,7 +32,7 @@ impl Action {
     }
 }
 
-// TODO: 搜索 crates.io 上的包
+// 搜索 crates.io 上的包
 #[subscriber]
 pub async fn search_cratesio(state: State<CommonState>, msg: Message) -> Result {
     // 检查消息是否以 "crate " 开头
@@ -255,7 +255,7 @@ async fn wait_user_command(
 
             // 获取文本内容
             if let Some(MessageNode::Text(text)) = next_msg.first() {
-                let text = text.trim().to_string();
+                let text = text.trim();
                 Action::parse(&text)
             } else {
                 None
