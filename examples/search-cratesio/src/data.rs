@@ -1,5 +1,3 @@
-use std::result;
-
 use scraper::{Html, Selector};
 use serde::Deserialize;
 use sithra_common::prelude::{ForwardMessageNode, MessageNode, UserId};

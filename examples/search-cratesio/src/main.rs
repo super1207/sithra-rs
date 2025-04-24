@@ -10,7 +10,7 @@ use ioevent::{Event, State, create_subscriber, subscriber};
 use log::info;
 use sithra_common::event::MessageEventFlattened as Message;
 use sithra_common::prelude::*;
-use sithra_headless_common::TakeScreenshot;
+use sithra_headless_common::{TakeScreenshot, TakeScreenshotResponse};
 use tokio::time::timeout;
 
 const SUBSCRIBERS: &[ioevent::Subscriber<CommonState>] = &[create_subscriber!(search_cratesio)];
@@ -168,9 +168,17 @@ pub async fn search_cratesio(state: State<CommonState>, msg: Message) -> Result 
                         selector: Some("[class^=\"_docs\"]".to_string()),
                     };
                     let img = state.call(&screenshot_params).await?;
-                    let img_url = format!("file://{}", img.file_path);
-                    let img_msg = vec![MessageNode::Image(img_url)];
-                    let _ = msg.reply(&state, img_msg).await?;
+                    if let TakeScreenshotResponse::Success(img) = img {
+                        let img_url = format!("file://{}", img);
+                        let img_msg = vec![MessageNode::Image(img_url)];
+                        let _ = msg.reply(&state, img_msg).await?;
+                    } else {
+                        msg.reply(
+                            &state,
+                            vec![MessageNode::Text("图片渲染失败捏。".to_string())],
+                        )
+                        .await?;
+                    }
                     delete_previous_message(&state, &prev_output).await?;
                 } else {
                     msg.reply(
