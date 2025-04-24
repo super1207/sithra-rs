@@ -56,7 +56,7 @@ pub async fn search_cratesio(state: State<CommonState>, msg: Message) -> Result 
         Ok(result) => result,
         Err(e) => {
             log::error!("crates.io 搜索失败: {}", e);
-            msg.reply(&state, vec![MessageNode::Text("搜索失败捏。".to_string())])
+            msg.reply(&state, vec![MessageNode::Text("搜索失败喵。".to_string())])
                 .await?;
             return Ok(());
         }
@@ -66,7 +66,7 @@ pub async fn search_cratesio(state: State<CommonState>, msg: Message) -> Result 
     if result.is_empty() {
         msg.reply(
             &state,
-            vec![MessageNode::Text("啥都没搜到捏。".to_string())],
+            vec![MessageNode::Text("啥都没搜到喵。".to_string())],
         )
         .await?;
         return Ok(());
@@ -80,7 +80,7 @@ pub async fn search_cratesio(state: State<CommonState>, msg: Message) -> Result 
         let user_cmd = match wait_user_command(&state, &msg, Duration::from_secs(15)).await {
             Ok(cmd) => cmd,
             Err(_) => {
-                msg.reply(&state, vec![MessageNode::Text("操作超时捏。".to_string())])
+                msg.reply(&state, vec![MessageNode::Text("操作超时喵。".to_string())])
                     .await?;
                 break;
             }
@@ -102,7 +102,7 @@ pub async fn search_cratesio(state: State<CommonState>, msg: Message) -> Result 
                     Err(_) => {
                         msg.reply(
                             &state,
-                            vec![MessageNode::Text("获取数据失败捏。".to_string())],
+                            vec![MessageNode::Text("获取数据失败喵。".to_string())],
                         )
                         .await?;
                         break;
@@ -125,7 +125,7 @@ pub async fn search_cratesio(state: State<CommonState>, msg: Message) -> Result 
                     Err(_) => {
                         msg.reply(
                             &state,
-                            vec![MessageNode::Text("获取数据失败捏。".to_string())],
+                            vec![MessageNode::Text("获取数据失败喵。".to_string())],
                         )
                         .await?;
                         break;
@@ -135,7 +135,7 @@ pub async fn search_cratesio(state: State<CommonState>, msg: Message) -> Result 
 
             // 超时
             Action::Timeout => {
-                msg.reply(&state, vec![MessageNode::Text("操作超时捏。".to_string())])
+                msg.reply(&state, vec![MessageNode::Text("操作超时喵。".to_string())])
                     .await?;
                 delete_previous_message(&state, &prev_output).await?;
                 break;
@@ -175,7 +175,7 @@ pub async fn search_cratesio(state: State<CommonState>, msg: Message) -> Result 
                     } else {
                         msg.reply(
                             &state,
-                            vec![MessageNode::Text("图片渲染失败捏。".to_string())],
+                            vec![MessageNode::Text("图片渲染失败喵。".to_string())],
                         )
                         .await?;
                     }
