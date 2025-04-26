@@ -1,20 +1,21 @@
 use std::ops::Deref;
 
 use ioevent::Event;
+use serde::Deserializer;
 use serde::{Deserialize, Serialize};
 
 use crate::message::*;
 use crate::model::*;
 
 #[derive(Debug, Clone, Deserialize, Serialize, Event)]
-pub struct MessageReceived<M: Message> {
+pub struct MessageEvent<M: Message> {
     generic_id: Option<GenericId>,
     channel: Channel,
     user: User,
     #[serde(deserialize_with = "deserialize_message")]
     message: M,
 }
-impl<M: Message> MessageReceived<M> {
+impl<M: Message> MessageEvent<M> {
     /// 创建一个消息接收事件
     pub fn new<T: EnsureGenericId>(
         gid: Option<T>,
@@ -50,14 +51,151 @@ impl<M: Message> MessageReceived<M> {
         &self.message
     }
     /// 获取特殊 ID
-    pub fn generic_id<T: EnsureGenericId>(&self) -> Result<T, T::Error> {
+    pub fn get_generic_id<T: EnsureGenericId>(&self) -> Result<T, T::Error> {
         T::ensure_generic_id(self.generic_id.as_ref().ok_or(T::Error::default())?)
     }
 }
-impl<M: Message> Deref for MessageReceived<M> {
+impl<M: Message> Deref for MessageEvent<M> {
     type Target = M;
 
     fn deref(&self) -> &Self::Target {
         &self.message
+    }
+}
+/// 消息操作事件
+#[derive(Debug, Clone, Deserialize, Serialize, Event)]
+pub struct MessageActionEvent<M: Message> {
+    generic_id: Option<GenericId>,
+    channel: Channel,
+    user: User,
+    message_id: MessageId,
+    #[serde(deserialize_with = "deserialize_message_action_type")]
+    action: MessageActionType<M>,
+}
+impl<M: Message> MessageActionEvent<M> {
+    /// 获取变动消息(变动后)
+    pub fn message(&self) -> Option<&M> {
+        self.action.message()
+    }
+    /// 获取变动消息ID(变动前)
+    pub fn message_id(&self) -> &MessageId {
+        &self.message_id
+    }
+    /// 获取操作者用户信息
+    pub fn user(&self) -> Option<&User> {
+        if self.user.is_empty() {
+            None
+        } else {
+            Some(&self.user)
+        }
+    }
+    /// 获取用户(可能为空，必须自行判断)
+    pub fn fetch_user(&self) -> &User {
+        &self.user
+    }
+    /// 获取聊天信息
+    pub fn channel(&self) -> &Channel {
+        &self.channel
+    }
+    /// 获取特殊 ID
+    pub fn get_generic_id<T: EnsureGenericId>(&self) -> Result<T, T::Error> {
+        T::ensure_generic_id(self.generic_id.as_ref().ok_or(T::Error::default())?)
+    }
+}
+/// 消息操作类型
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum MessageActionType<M: Message> {
+    /// 删除
+    Delete,
+    /// 编辑(新消息)
+    Edit(#[serde(deserialize_with = "deserialize_message")] M),
+}
+/// 反序列化消息操作类型
+pub fn deserialize_message_action_type<'de, D, M>(
+    deserializer: D,
+) -> Result<MessageActionType<M>, D::Error>
+where
+    D: Deserializer<'de>,
+    M: Message,
+{
+    let raw = MessageActionType::<M>::deserialize(deserializer)?;
+    Ok(raw)
+}
+impl<M: Message> MessageActionType<M> {
+    /// 获取变动消息(变动后)
+    pub fn message(&self) -> Option<&M> {
+        match self {
+            Self::Edit(message) => Some(message),
+            _ => None,
+        }
+    }
+}
+/// 群用户变动事件
+#[derive(Debug, Clone, Deserialize, Serialize, Event)]
+pub struct UserActionEvent {
+    generic_id: Option<GenericId>,
+    channel: Channel,
+    user: User,
+    action: UserActionType,
+}
+impl UserActionEvent {
+    /// 获取操作者
+    pub fn user(&self) -> Option<&User> {
+        if self.user.is_empty() {
+            None
+        } else {
+            Some(&self.user)
+        }
+    }
+    /// 获取被操作者
+    pub fn target(&self) -> Option<&User> {
+        self.action.target()
+    }
+    /// 获取聊天信息
+    pub fn channel(&self) -> &Channel {
+        &self.channel
+    }
+    /// 获取特殊 ID
+    pub fn get_generic_id<T: EnsureGenericId>(&self) -> Result<T, T::Error> {
+        T::ensure_generic_id(self.generic_id.as_ref().ok_or(T::Error::default())?)
+    }
+}
+/// 群用户变动类型
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum UserActionType {
+    /// 加入群聊(用户)
+    JoinGroup(User),
+    /// 离开群聊(用户)
+    LeaveGroup(User),
+    /// 被禁止(用户)
+    Ban(User),
+    /// 被解除禁止(用户)
+    Unban(User),
+}
+impl UserActionType {
+    /// 获取目标用户
+    pub fn target(&self) -> Option<&User> {
+        match self {
+            Self::JoinGroup(user) => Some(user),
+            Self::LeaveGroup(user) => Some(user),
+            Self::Ban(user) => Some(user),
+            Self::Unban(user) => Some(user),
+        }
+    }
+}
+/// 聊天申请
+#[derive(Debug, Clone, Deserialize, Serialize, Event)]
+pub struct ChannelRequestEvent {
+    generic_id: Option<GenericId>,
+    channel: Channel,
+}
+impl ChannelRequestEvent {
+    /// 获取聊天信息
+    pub fn channel(&self) -> &Channel {
+        &self.channel
+    }
+    /// 获取特殊 ID
+    pub fn get_generic_id<T: EnsureGenericId>(&self) -> Result<T, T::Error> {
+        T::ensure_generic_id(self.generic_id.as_ref().ok_or(T::Error::default())?)
     }
 }

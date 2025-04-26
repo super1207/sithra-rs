@@ -1,7 +1,7 @@
 use micromap::Map;
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::model::{MessageId, SVec, KV};
+use crate::model::{KV, MessageId, SVec};
 
 /// 原始消息段，其中 kv 仅可最多包含 12 个字符串键值对，用于存储消息内容
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -97,11 +97,24 @@ impl From<MessageRaw> for SVec<SegmentRaw> {
         value.segments
     }
 }
-impl<T: Message> From<T> for MessageRaw {
-    fn from(value: T) -> Self {
+impl<M: Message> From<M> for MessageRaw {
+    fn from(value: M) -> Self {
         let id = value.id();
         let segments = value.into_raw().into();
         Self::new(segments, id)
+    }
+}
+pub trait FromRawSegment
+where
+    Self: Sized + Segment,
+{
+    fn from_raw_segment(segment: &mut SegmentRaw) -> Option<Self>;
+}
+impl<T: FromRawSegment + Segment> MessageDeserializer for T {
+    type Output = Self;
+    fn deserialize(mut segment: SegmentRaw) -> Option<Self> {
+        let kind = Self::from_raw_segment(&mut segment)?;
+        Some(kind)
     }
 }
 
@@ -138,19 +151,21 @@ pub mod common {
             Self::Unknown(SegmentRaw::new(r#type.to_string(), kv))
         }
     }
-    impl From<&mut SegmentRaw> for Option<CommonSegment> {
-        fn from(value: &mut SegmentRaw) -> Self {
-            match value.r#type.as_str() {
-                "text" => Some(CommonSegment::Text(value.kv.remove("content")?)),
-                "image" => Some(CommonSegment::Image(value.kv.remove("url")?)),
-                "at" => Some(CommonSegment::At(UserId::new(value.kv.remove("user_id")?))),
+    impl FromRawSegment for CommonSegment {
+        fn from_raw_segment(segment: &mut SegmentRaw) -> Option<Self> {
+            match segment.r#type.as_str() {
+                "text" => Some(CommonSegment::Text(segment.kv.remove("content")?)),
+                "image" => Some(CommonSegment::Image(segment.kv.remove("url")?)),
+                "at" => Some(CommonSegment::At(UserId::new(
+                    segment.kv.remove("user_id")?,
+                ))),
                 _ => None,
             }
         }
     }
     impl Segment for CommonSegment {
-        type Serializer = CommonMessageProcessor;
-        type Deserializer = CommonMessageProcessor;
+        type Serializer = CommonMessageSerializer;
+        type Deserializer = CommonSegment;
     }
     /// 一般消息类型。
     #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -160,8 +175,8 @@ pub mod common {
         /// 消息段
         inner: SVec<CommonSegment>,
     }
-    pub struct CommonMessageProcessor;
-    impl MessageSerializer for CommonMessageProcessor {
+    pub struct CommonMessageSerializer;
+    impl MessageSerializer for CommonMessageSerializer {
         type Input = CommonSegment;
         fn serialize(message: Self::Input) -> Option<SegmentRaw> {
             match message {
@@ -170,13 +185,6 @@ pub mod common {
                 CommonSegment::At(user_id) => Some(SegmentRaw::at(user_id.to_string())),
                 CommonSegment::Unknown(segment) => Some(segment),
             }
-        }
-    }
-    impl MessageDeserializer for CommonMessageProcessor {
-        type Output = CommonSegment;
-        fn deserialize(mut segment: SegmentRaw) -> Option<Self::Output> {
-            let kind = Option::<CommonSegment>::from(&mut segment)?;
-            Some(kind)
         }
     }
     impl IntoIterator for CommonMessage {
