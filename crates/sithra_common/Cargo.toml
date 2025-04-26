@@ -14,3 +14,4 @@ ioevent.workspace = true
 tokio.workspace = true
 sithra_macro.workspace = true
 log.workspace = true
+micromap = { version = "0.0.19", features = ["serde"] }
