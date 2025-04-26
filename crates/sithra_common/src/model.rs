@@ -1,8 +1,15 @@
 use std::str::FromStr;
 
+use micromap::Map;
 use serde::{Deserialize, Serialize};
+use smallvec::SmallVec;
 
 use crate::error::BotError;
+
+/// 键值对
+pub type KV = Map<String, String, 3>;
+/// 短向量
+pub type SVec<T> = SmallVec<[T; 3]>;
 
 /// 用户 ID
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]

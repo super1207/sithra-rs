@@ -25,8 +25,6 @@ where
     D: Deserializer<'de>,
     M: Message,
 {
-    // 先将数据反序列化为MessageRaw
     let raw = MessageRaw::deserialize(deserializer)?;
-    // 然后使用Message特性的from_raw方法转换
     Ok(M::from_raw(raw))
 }

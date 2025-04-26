@@ -1,11 +1,7 @@
 use micromap::Map;
 use serde::{Deserialize, Serialize};
-use smallvec::SmallVec;
 
-use crate::model::MessageId;
-
-pub type KV = Map<String, String, 3>;
-pub type SVec<T> = SmallVec<[T; 3]>;
+use crate::model::{MessageId, SVec, KV};
 
 /// 原始消息段，其中 kv 仅可最多包含 12 个字符串键值对，用于存储消息内容
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -120,6 +116,8 @@ pub mod common {
         Image(String),
         /// 提及用户(用户 ID)
         At(String),
+        /// 未知消息段
+        Unknown(SegmentRaw),
     }
     impl CommonSegment {
         /// 生成文本消息段
@@ -133,6 +131,9 @@ pub mod common {
         /// 生成提及用户消息段
         pub fn at<S: ToString>(user_id: S) -> Self {
             Self::At(user_id.to_string())
+        }
+        pub fn unknown<S: ToString>(r#type: S, kv: KV) -> Self {
+            Self::Unknown(SegmentRaw::new(r#type.to_string(), kv))
         }
     }
     impl From<&mut SegmentRaw> for Option<CommonSegment> {
@@ -165,6 +166,7 @@ pub mod common {
                 CommonSegment::Text(text) => Some(SegmentRaw::text(text)),
                 CommonSegment::Image(url) => Some(SegmentRaw::img(url)),
                 CommonSegment::At(user_id) => Some(SegmentRaw::at(user_id)),
+                CommonSegment::Unknown(segment) => Some(segment),
             }
         }
     }
@@ -220,6 +222,33 @@ macro_rules! msg {
             $(
                 <$type as $crate::message::Message>::Segment::$segment($value),
             )*
+        ])
+    };
+}
+
+pub fn create_kv<M: ToString, const N: usize>(value: [(M, M); N]) -> KV {
+    KV::from_iter(
+        value
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v.to_string())),
+    )
+}
+
+/// 将键值对转换为KV
+///
+/// # 示例
+///
+/// ```rust
+/// let map = kv!{
+///     "key1": "value1",
+///     "key2": "value2",
+/// };
+/// ```
+#[macro_export]
+macro_rules! kv {
+    {$($key:tt : $value:expr),* $(,)?} => {
+        $crate::message::create_kv([
+            $(($key, $value)),*
         ])
     };
 }
