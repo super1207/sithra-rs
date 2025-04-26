@@ -62,5 +62,8 @@ pub mod prelude {
 
 pub mod log;
 pub mod message;
+pub mod model;
+pub mod event;
+pub mod error;
 pub use micromap as map;
 pub use smallvec as vec;

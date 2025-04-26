@@ -2,10 +2,12 @@ use micromap::Map;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
+use crate::model::MessageId;
+
 pub type KV = Map<String, String, 3>;
 pub type SVec<T> = SmallVec<[T; 3]>;
 
-/// 原始消息段，其中 kv 仅可最多包含 12 个键值对，用于存储消息内容
+/// 原始消息段，其中 kv 仅可最多包含 12 个字符串键值对，用于存储消息内容
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SegmentRaw {
     pub r#type: String,
@@ -24,7 +26,7 @@ impl SegmentRaw {
         Self::new("text".to_string(), kv)
     }
     /// 图片
-    pub fn image(url: String) -> Self {
+    pub fn img(url: String) -> Self {
         let mut kv = KV::new();
         kv.insert("url".to_string(), url);
         Self::new("image".to_string(), kv)
@@ -57,16 +59,18 @@ pub trait MessageSerializer {
 /// 消息类型
 pub trait Message
 where
-    Self: IntoIterator<Item = Self::Segment> + Clone,
+    Self: IntoIterator<Item = Self::Segment> + Clone + for<'a> Deserialize<'a> + Serialize,
 {
+    /// 消息段类型
     type Segment: Segment;
-    fn segments(
-        raw: impl IntoIterator<Item = SegmentRaw>,
-    ) -> impl Iterator<Item = Self::Segment> {
+    /// 从原始消息段列表中生成消息段迭代器
+    fn segments(raw: impl IntoIterator<Item = SegmentRaw>) -> impl Iterator<Item = Self::Segment> {
         raw.into_iter()
             .filter_map(<Self::Segment as Segment>::Deserializer::deserialize)
     }
+    /// 从原始消息段列表和消息 ID 生成消息
     fn from_raw(raw: MessageRaw) -> Self;
+    /// 将消息转换为原始消息段列表和消息 ID
     fn into_raw(self) -> MessageRaw {
         let id = self.id();
         let segments = self
@@ -75,15 +79,20 @@ where
             .collect::<SVec<_>>();
         MessageRaw::new(segments, id)
     }
-    fn id(&self) -> Option<String>;
+    /// 获取消息 ID
+    fn id(&self) -> Option<MessageId>;
+    /// 从消息段数组生成消息，仅用于发送！
+    fn from_array<const N: usize>(array: [Self::Segment; N]) -> Self;
 }
+/// 原始消息
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct MessageRaw {
     pub segments: SVec<SegmentRaw>,
-    pub id: Option<String>,
+    pub id: Option<MessageId>,
 }
 impl MessageRaw {
-    pub fn new(segments: SVec<SegmentRaw>, id: Option<String>) -> Self {
+    /// 从消息段数组和消息 ID 生成原始消息
+    pub fn new(segments: SVec<SegmentRaw>, id: Option<MessageId>) -> Self {
         Self { segments, id }
     }
 }
@@ -102,14 +111,29 @@ impl<T: Message> From<T> for MessageRaw {
 
 pub mod common {
     use super::*;
-    #[derive(Debug, Clone)]
+    /// 一般消息段类型
+    #[derive(Debug, Clone, Deserialize, Serialize)]
     pub enum CommonSegment {
-        /// 文本
+        /// 文本(文本内容)
         Text(String),
-        /// 图片
+        /// 图片(图片 URL)
         Image(String),
-        /// 提及用户
+        /// 提及用户(用户 ID)
         At(String),
+    }
+    impl CommonSegment {
+        /// 生成文本消息段
+        pub fn text<S: ToString>(text: S) -> Self {
+            Self::Text(text.to_string())
+        }
+        /// 生成图片消息段
+        pub fn img<S: ToString>(url: S) -> Self {
+            Self::Image(url.to_string())
+        }
+        /// 生成提及用户消息段
+        pub fn at<S: ToString>(user_id: S) -> Self {
+            Self::At(user_id.to_string())
+        }
     }
     impl From<&mut SegmentRaw> for Option<CommonSegment> {
         fn from(value: &mut SegmentRaw) -> Self {
@@ -126,9 +150,11 @@ pub mod common {
         type Deserializer = CommonMessageProcessor;
     }
     /// 一般消息类型。
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, Deserialize, Serialize)]
     pub struct CommonMessage {
-        pub id: Option<String>,
+        /// 消息 ID
+        id: Option<MessageId>,
+        /// 消息段
         inner: SVec<CommonSegment>,
     }
     pub struct CommonMessageProcessor;
@@ -137,7 +163,7 @@ pub mod common {
         fn serialize(message: Self::Input) -> Option<SegmentRaw> {
             match message {
                 CommonSegment::Text(text) => Some(SegmentRaw::text(text)),
-                CommonSegment::Image(url) => Some(SegmentRaw::image(url)),
+                CommonSegment::Image(url) => Some(SegmentRaw::img(url)),
                 CommonSegment::At(user_id) => Some(SegmentRaw::at(user_id)),
             }
         }
@@ -158,7 +184,7 @@ pub mod common {
     }
     impl Message for CommonMessage {
         type Segment = CommonSegment;
-        fn id(&self) -> Option<String> {
+        fn id(&self) -> Option<MessageId> {
             self.id.clone()
         }
         fn from_raw(raw: MessageRaw) -> Self {
@@ -168,5 +194,32 @@ pub mod common {
                 inner: segments,
             }
         }
+        fn from_array<const N: usize>(array: [Self::Segment; N]) -> Self {
+            let segments = array.into_iter().collect();
+            Self {
+                id: None,
+                inner: segments,
+            }
+        }
     }
+}
+
+/// 接收消息段类型和消息段列表，返回消息类型
+/// 例子：
+/// ```rust
+/// let msg = msg!(CommonMessage[
+///     text: "Hello, world!",
+///     img: "https://example.com/image.png",
+///     at: "1234567890",
+/// ]);
+/// ```
+#[macro_export]
+macro_rules! msg {
+    ($type:ident[$($segment:ident: $value:expr),*$(,)?]) => {
+        $type::from_array([
+            $(
+                <$type as $crate::message::Message>::Segment::$segment($value),
+            )*
+        ])
+    };
 }
