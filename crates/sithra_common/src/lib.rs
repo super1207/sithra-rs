@@ -61,3 +61,4 @@ pub mod prelude {
  */
 
 pub mod log;
+pub mod message;
