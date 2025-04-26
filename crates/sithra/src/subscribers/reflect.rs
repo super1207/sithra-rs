@@ -3,6 +3,7 @@ use log::error;
 
 use crate::client::ClientState;
 
+/* 
 #[subscriber]
 pub async fn reflect_procedure(state: State<ClientState>, pcd: ProcedureCallData) {
     let result = state.wright.emit(&pcd);
@@ -10,6 +11,7 @@ pub async fn reflect_procedure(state: State<ClientState>, pcd: ProcedureCallData
         error!("反射调用失败: {}", e);
     }
 }
+*/
 
 #[subscriber]
 pub async fn reflect_event(state: State<ClientState>, event: AnyEvent) {

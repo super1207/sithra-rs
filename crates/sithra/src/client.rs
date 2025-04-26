@@ -38,9 +38,6 @@ pub use msg_receiver::*; */
 
 #[derive(Clone)]
 pub struct ClientState {
-    /* old version
-    pub api_sender: mpsc::UnboundedSender<ApiRequest>,
-    pub api_shooters: Arc<DashMap<String, oneshot::Sender<Result<ApiResponse, ApiError>>>>, */
     pub pcw: DefaultProcedureWright,
 }
 impl ProcedureCallWright for ClientState {
