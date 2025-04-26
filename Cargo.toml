@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/*", "plugins/*"]
+members = ["crates/*", "plugins/*", "adapters/*"]
 default-members = ["crates/sithra"]
 
 [workspace.package]

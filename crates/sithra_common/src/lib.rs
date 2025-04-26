@@ -60,10 +60,22 @@ pub mod prelude {
 }
  */
 
+pub mod error;
+pub mod event;
+pub mod global;
 pub mod log;
 pub mod message;
 pub mod model;
-pub mod event;
-pub mod error;
 pub use micromap as map;
+pub use sithra_macro::*;
 pub use smallvec as vec;
+pub mod prelude {
+    pub use crate::error::*;
+    pub use crate::event::*;
+    pub use crate::global;
+    pub use crate::map;
+    pub use crate::message::*;
+    pub use crate::model::*;
+    pub use crate::vec;
+    pub use sithra_macro::*;
+}

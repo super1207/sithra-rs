@@ -769,6 +769,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sithra-onebot"
+version = "0.1.0"
+dependencies = [
+ "ioevent",
+ "log",
+ "sithra_common",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "sithra_common"
 version = "0.1.0"
 dependencies = [
