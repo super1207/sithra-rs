@@ -1,14 +1,14 @@
 use std::ops::Deref;
 
 use ioevent::Event;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::message::*;
 use crate::model::*;
 
 #[derive(Debug, Clone, Deserialize, Serialize, Event)]
 pub struct MessageReceived<M: Message> {
-    gid: GenericId,
+    gid: Option<GenericId>,
     channel: Channel,
     user: User,
     #[serde(deserialize_with = "deserialize_message")]
@@ -16,9 +16,14 @@ pub struct MessageReceived<M: Message> {
 }
 impl<M: Message> MessageReceived<M> {
     /// 创建一个消息接收事件
-    pub fn new(gid: Option<GenericId>, channel: Channel, user: User, message: M) -> Self {
+    pub fn new<T: EnsureGenericId>(
+        gid: Option<T>,
+        channel: Channel,
+        user: User,
+        message: M,
+    ) -> Self {
         Self {
-            gid: gid.unwrap_or_default(),
+            gid: gid.map(|gid| gid.into()),
             channel,
             user,
             message,
@@ -46,7 +51,7 @@ impl<M: Message> MessageReceived<M> {
     }
     /// 获取聊天 ID
     pub fn gid<T: EnsureGenericId>(&self) -> Result<T, T::Error> {
-        T::ensure_generic_id(&self.gid)
+        T::ensure_generic_id(self.gid.as_ref().ok_or(T::Error::default())?)
     }
 }
 impl<M: Message> Deref for MessageReceived<M> {
@@ -55,12 +60,4 @@ impl<M: Message> Deref for MessageReceived<M> {
     fn deref(&self) -> &Self::Target {
         &self.message
     }
-}
-pub fn deserialize_message<'de, D, M>(deserializer: D) -> Result<M, D::Error>
-where
-    D: Deserializer<'de>,
-    M: Message,
-{
-    let raw = MessageRaw::deserialize(deserializer)?;
-    Ok(M::from_raw(raw))
 }

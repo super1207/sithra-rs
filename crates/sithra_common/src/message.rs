@@ -1,5 +1,5 @@
 use micromap::Map;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::model::{MessageId, SVec, KV};
 
@@ -205,7 +205,15 @@ pub mod common {
         }
     }
 }
-
+/// 反序列化消息
+pub fn deserialize_message<'de, D, M>(deserializer: D) -> Result<M, D::Error>
+where
+    D: Deserializer<'de>,
+    M: Message,
+{
+    let raw = MessageRaw::deserialize(deserializer)?;
+    Ok(M::from_raw(raw))
+}
 /// 接收消息段类型和消息段列表，返回消息类型
 /// 例子：
 /// ```rust

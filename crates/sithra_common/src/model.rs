@@ -202,8 +202,8 @@ impl Default for GenericId {
 }
 pub trait EnsureGenericId
 where
-    Self: Sized,
+    Self: Sized + Into<GenericId>,
 {
-    type Error;
+    type Error: Default;
     fn ensure_generic_id(id: &GenericId) -> Result<Self, Self::Error>;
 }
