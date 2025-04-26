@@ -1,11 +1,12 @@
 use std::ops::Deref;
 
+use ioevent::Event;
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::message::{Message, MessageRaw};
 use crate::model::{Channel, UserId};
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Event)]
 pub struct MessageReceived<M: Message> {
     pub channel: Channel,
     pub user_id: UserId,
