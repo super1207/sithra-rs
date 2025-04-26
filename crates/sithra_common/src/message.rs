@@ -106,6 +106,8 @@ impl<T: Message> From<T> for MessageRaw {
 }
 
 pub mod common {
+    use crate::model::UserId;
+
     use super::*;
     /// 一般消息段类型
     #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -115,7 +117,7 @@ pub mod common {
         /// 图片(图片 URL)
         Image(String),
         /// 提及用户(用户 ID)
-        At(String),
+        At(UserId),
         /// 未知消息段
         Unknown(SegmentRaw),
     }
@@ -129,8 +131,8 @@ pub mod common {
             Self::Image(url.to_string())
         }
         /// 生成提及用户消息段
-        pub fn at<S: ToString>(user_id: S) -> Self {
-            Self::At(user_id.to_string())
+        pub fn at<S: Into<UserId>>(user_id: S) -> Self {
+            Self::At(user_id.into())
         }
         pub fn unknown<S: ToString>(r#type: S, kv: KV) -> Self {
             Self::Unknown(SegmentRaw::new(r#type.to_string(), kv))
@@ -141,7 +143,7 @@ pub mod common {
             match value.r#type.as_str() {
                 "text" => Some(CommonSegment::Text(value.kv.remove("content")?)),
                 "image" => Some(CommonSegment::Image(value.kv.remove("url")?)),
-                "at" => Some(CommonSegment::At(value.kv.remove("user_id")?)),
+                "at" => Some(CommonSegment::At(UserId::new(value.kv.remove("user_id")?))),
                 _ => None,
             }
         }
@@ -165,7 +167,7 @@ pub mod common {
             match message {
                 CommonSegment::Text(text) => Some(SegmentRaw::text(text)),
                 CommonSegment::Image(url) => Some(SegmentRaw::img(url)),
-                CommonSegment::At(user_id) => Some(SegmentRaw::at(user_id)),
+                CommonSegment::At(user_id) => Some(SegmentRaw::at(user_id.to_string())),
                 CommonSegment::Unknown(segment) => Some(segment),
             }
         }

@@ -17,12 +17,8 @@ pub struct Config {
 
 #[derive(Debug, Deserialize)]
 pub struct BaseConfig {
-    #[serde(rename = "ws-url")]
-    pub ws_url: String,
     #[serde(rename = "log-level")]
     pub log_level: LogLevel,
-    #[serde(rename = "self-id")]
-    pub self_id: u64,
 }
 
 impl Config {

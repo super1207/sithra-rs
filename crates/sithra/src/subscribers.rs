@@ -1,10 +1,9 @@
 pub mod api;
 pub mod logger;
 pub mod reflect;
-use api::*;
 use logger::*;
 use ioevent::{create_subscriber, EventData, Subscriber};
-use reflect::reflect_subscriber;
+use reflect::{reflect_event, reflect_procedure};
 
 use crate::client::ClientState;
 
@@ -26,9 +25,10 @@ pub const SUBSCRIBERS: &[Subscriber<ClientState>] = &[
     create_subscriber!(api_get_group_member_list),
     create_subscriber!(api_get_msg),
     create_subscriber!(api_create_forward_msg), */
-    create_subscriber!(reflect_subscriber),
+    create_subscriber!(reflect_procedure),
     create_subscriber!(log_subscriber),
     create_subscriber!(tracing_subscriber),
+    create_subscriber!(reflect_event)
 ];
 
 #[ioevent::subscriber]

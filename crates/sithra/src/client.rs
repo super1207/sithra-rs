@@ -32,23 +32,27 @@ use tokio::{
     net::TcpStream,
     sync::{Mutex, mpsc, oneshot},
 };
-use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, tungstenite::Message};
-
 /* pub use api_receiver::*;
 pub use api_sender::*;
 pub use msg_receiver::*; */
 
 #[derive(Clone)]
 pub struct ClientState {
-   /* old version
+    /* old version
     pub api_sender: mpsc::UnboundedSender<ApiRequest>,
     pub api_shooters: Arc<DashMap<String, oneshot::Sender<Result<ApiResponse, ApiError>>>>, */
     pub pcw: DefaultProcedureWright,
-    pub self_id: u64,
 }
 impl ProcedureCallWright for ClientState {
     fn next_echo(&self) -> impl Future<Output = u64> + Send {
         self.pcw.next_echo()
+    }
+}
+impl ClientState {
+    pub fn new() -> Self {
+        Self {
+            pcw: DefaultProcedureWright::default(),
+        }
     }
 }
 

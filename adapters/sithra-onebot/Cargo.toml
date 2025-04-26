@@ -9,3 +9,4 @@ tokio.workspace = true
 sithra_common.workspace = true
 log.workspace = true
 thiserror.workspace = true
+tokio-tungstenite = "0.26.2"

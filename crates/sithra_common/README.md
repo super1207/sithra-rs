@@ -1,1 +1,0 @@
-./crates/sithra/README.md

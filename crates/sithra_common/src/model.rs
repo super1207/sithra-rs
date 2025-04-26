@@ -11,41 +11,87 @@ pub type KV = Map<String, String, 3>;
 /// 短向量
 pub type SVec<T> = SmallVec<[T; 3]>;
 
+macro_rules! impl_id_traits {
+    ($type:ty) => {
+        impl ToString for $type {
+            fn to_string(&self) -> String {
+                self.0.clone()
+            }
+        }
+        impl FromStr for $type {
+            type Err = BotError;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Ok(Self::new(s))
+            }
+        }
+        impl From<&str> for $type {
+            fn from(s: &str) -> Self {
+                Self::new(s)
+            }
+        }
+        impl From<u64> for $type {
+            fn from(s: u64) -> Self {
+                Self::new(s.to_string())
+            }
+        }
+        impl From<u32> for $type {
+            fn from(s: u32) -> Self {
+                Self::new(s.to_string())
+            }
+        }
+        impl From<u16> for $type {
+            fn from(s: u16) -> Self {
+                Self::new(s.to_string())
+            }
+        }
+        impl From<i64> for $type {
+            fn from(s: i64) -> Self {
+                Self::new(s.to_string())
+            }
+        }
+        impl From<i32> for $type {
+            fn from(s: i32) -> Self {
+                Self::new(s.to_string())
+            }
+        }
+        impl From<i16> for $type {
+            fn from(s: i16) -> Self {
+                Self::new(s.to_string())
+            }
+        }
+    };
+}
+
 /// 用户 ID
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct UserId(String);
 impl UserId {
-    pub fn new(id: String) -> Self {
-        Self(id)
+    pub fn new(id: impl ToString) -> Self {
+        Self(id.to_string())
     }
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 }
-impl ToString for UserId {
-    fn to_string(&self) -> String {
-        self.0.clone()
-    }
-}
+impl_id_traits!(UserId);
+
 /// 消息 ID
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct MessageId(String);
 impl MessageId {
-    pub fn new(id: String) -> Self {
-        Self(id)
+    pub fn new(id: impl ToString) -> Self {
+        Self(id.to_string())
     }
 }
-impl ToString for MessageId {
-    fn to_string(&self) -> String {
-        self.0.clone()
-    }
-}
+impl_id_traits!(MessageId);
+
 /// 频道 ID
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct Channel(String, ChannelType);
 impl Channel {
-    pub fn new(id: String, channel_type: ChannelType) -> Self {
-        Self(id, channel_type)
+    pub fn new(id: impl ToString, channel_type: ChannelType) -> Self {
+        Self(id.to_string(), channel_type)
     }
     pub fn channel_type(&self) -> &ChannelType {
         &self.1
@@ -109,10 +155,10 @@ pub struct User {
     nick: Option<String>,
 }
 impl User {
-    pub fn new(uid: UserId, name: String, nick: Option<String>, avatar: Option<String>) -> Self {
+    pub fn new(uid: impl Into<UserId>, name: impl ToString, nick: Option<String>, avatar: Option<String>) -> Self {
         Self {
-            uid,
-            name,
+            uid: uid.into(),
+            name: name.to_string(),
             nick,
             avatar,
         }
@@ -146,28 +192,28 @@ pub struct UserBuilder {
     avatar: Option<String>,
 }
 impl UserBuilder {
-    pub fn new(uid: UserId, name: String) -> Self {
+    pub fn new(uid: impl Into<UserId>, name: String) -> Self {
         Self {
-            id: uid,
+            id: uid.into(),
             name,
             nick: None,
             avatar: None,
         }
     }
-    pub fn id(mut self, id: UserId) -> Self {
-        self.id = id;
+    pub fn id(mut self, id: impl Into<UserId>) -> Self {
+        self.id = id.into();
         self
     }
-    pub fn name(mut self, name: String) -> Self {
-        self.name = name;
+    pub fn name(mut self, name: impl ToString) -> Self {
+        self.name = name.to_string();
         self
     }
-    pub fn nick(mut self, nick: String) -> Self {
-        self.nick = Some(nick);
+    pub fn nick(mut self, nick: impl ToString) -> Self {
+        self.nick = Some(nick.to_string());
         self
     }
-    pub fn avatar(mut self, avatar: String) -> Self {
-        self.avatar = Some(avatar);
+    pub fn avatar(mut self, avatar: impl ToString) -> Self {
+        self.avatar = Some(avatar.to_string());
         self
     }
     pub fn build(self) -> User {

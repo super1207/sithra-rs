@@ -13,10 +13,11 @@ use ioevent::{
 };
 use log::*;
 use subscribers::SUBSCRIBERS;
-use tokio::{fs, process::Command, select};
-use tokio_util::sync::CancellationToken;
+use tokio::{
+    fs::{self, create_dir_all},
+    process::Command,
+};
 use tracing_subscriber::prelude::*;
-use util::join_url;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -36,12 +37,21 @@ async fn main() -> anyhow::Result<()> {
 
     let mut childs = Vec::new();
 
-    let mut plugin_dir = fs::read_dir(plugin_path).await?;
+    let mut plugin_dir = fs::read_dir(&plugin_path).await?;
     while let Some(entry) = plugin_dir.next_entry().await? {
         let path = entry.path();
         if path.is_file() {
             let mut child = Command::new(&path);
-            child.arg(config.base.self_id.to_string());
+            let plugin_name = path.file_name();
+            if let Some(Some(name)) = plugin_name.map(|s| s.to_str()) {
+                let data_path = plugin_path.join(name);
+                create_dir_all(&data_path).await?;
+                let data_path = fs::canonicalize(&data_path).await?;
+                child.arg(data_path);
+            } else {
+                error!(target: "plugin_loader", "插件名称获取失败: {:?}", path);
+                continue;
+            }
             child.stdout(Stdio::piped());
             child.stdin(Stdio::piped());
             let mut child = child.spawn()?;
@@ -58,6 +68,21 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let (bus, wright) = builder.build();
+    let state = State::new(ClientState::new(), wright);
+    let bus_handle = bus
+        .run(state, &|e| {
+            error!(target: "main", "总线错误: {:?}", e);
+            match e {
+                BusError::BusRecv(BusRecvError::Recv(ioevent::error::RecvError::Io(_))) => {
+                    std::process::exit(1);
+                }
+                _ => {}
+            }
+        })
+        .await;
+    let (_, close_headle) = bus_handle.spawn();
+    let _ = tokio::signal::ctrl_c().await;
+    close_headle.close();
     /* old version
     let App {
         state,
@@ -72,7 +97,6 @@ async fn main() -> anyhow::Result<()> {
     )
     .await?; */
 
-    log::info!("成功连接到 WebSocket 服务器");
     /* old version
     let cancel_token = CancellationToken::new();
 

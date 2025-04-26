@@ -762,7 +762,6 @@ dependencies = [
  "serde_json",
  "sithra_common",
  "tokio",
- "tokio-tungstenite",
  "tokio-util",
  "toml",
  "tracing-subscriber",
@@ -777,6 +776,7 @@ dependencies = [
  "sithra_common",
  "thiserror",
  "tokio",
+ "tokio-tungstenite",
 ]
 
 [[package]]
