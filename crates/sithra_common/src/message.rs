@@ -244,7 +244,7 @@ macro_rules! msg {
     };
 }
 
-pub fn create_kv<M: ToString, const N: usize>(value: [(M, M); N]) -> KV {
+pub fn create_kv<const N: usize>(value: [(&str, &str); N]) -> KV {
     KV::from_iter(
         value
             .into_iter()
