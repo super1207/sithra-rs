@@ -15,3 +15,4 @@ tokio.workspace = true
 sithra_macro.workspace = true
 log.workspace = true
 micromap = { version = "0.0.19", features = ["serde"] }
+smallvec = { version = "1.15.0", features = ["serde"] }

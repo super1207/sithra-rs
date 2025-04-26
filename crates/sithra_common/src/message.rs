@@ -1,14 +1,16 @@
 use micromap::Map;
 use serde::{Deserialize, Serialize};
+use smallvec::SmallVec;
 
-pub type KV = Map<String, String, 12>;
+pub type KV = Map<String, String, 3>;
+pub type SVec<T> = SmallVec<[T; 3]>;
 
 /// 原始消息段，其中 kv 仅可最多包含 12 个键值对，用于存储消息内容
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SegmentRaw {
     pub r#type: String,
     pub message_id: String,
-    pub kv: Map<String, String, 12>,
+    pub kv: Map<String, String, 3>,
 }
 
 impl SegmentRaw {
@@ -39,7 +41,6 @@ impl SegmentRaw {
         Self::new("at".to_string(), message_id, kv)
     }
 }
-
 /// 消息段类型
 pub trait Segment
 where
@@ -48,34 +49,53 @@ where
     type Serializer: MessageSerializer<Input = Self>;
     type Deserializer: MessageDeserializer<Output = Self>;
 }
-
 /// 消息段反序列化器
 pub trait MessageDeserializer {
     type Output: Segment;
     fn deserialize(segment: SegmentRaw) -> Option<Self::Output>;
 }
-
 /// 消息序列化器
 pub trait MessageSerializer {
     type Input: Segment;
     fn serialize(message: Self::Input) -> Option<SegmentRaw>;
 }
-
 /// 消息类型
 pub trait Message
 where
     Self: IntoIterator<Item = Self::Segment> + FromIterator<Self::Segment> + Clone,
 {
     type Segment: Segment;
-    fn from_raw(raw: impl IntoIterator<Item = SegmentRaw>) -> Self {
+    fn from_raw_iter(raw: impl IntoIterator<Item = SegmentRaw>) -> Self {
         raw.into_iter()
-            .filter_map(Self::Segment::Deserializer::deserialize)
+            .filter_map(<Self::Segment as Segment>::Deserializer::deserialize)
             .collect()
     }
-    fn into_raw(self) -> Vec<SegmentRaw> {
+    fn from_raw(raw: MessageRaw) -> Self {
+        Self::from_raw_iter(raw.segments)
+    }
+    fn into_raw(self) -> SVec<SegmentRaw> {
         self.into_iter()
-            .filter_map(Self::Segment::Serializer::serialize)
+            .filter_map(<Self::Segment as Segment>::Serializer::serialize)
             .collect()
+    }
+}
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct MessageRaw {
+    pub segments: SVec<SegmentRaw>,
+}
+impl MessageRaw {
+    pub fn new(segments: SVec<SegmentRaw>) -> Self {
+        Self { segments }
+    }
+}
+impl From<MessageRaw> for SVec<SegmentRaw> {
+    fn from(value: MessageRaw) -> Self {
+        value.segments
+    }
+}
+impl<T: Message> From<T> for MessageRaw {
+    fn from(value: T) -> Self {
+        Self::new(value.into_raw())
     }
 }
 
@@ -133,11 +153,11 @@ pub mod common {
     /// 一般消息类型。
     #[derive(Debug, Clone)]
     pub struct CommonMessage {
-        inner: Vec<CommonSegment>,
+        inner: SVec<CommonSegment>,
     }
     impl IntoIterator for CommonMessage {
         type Item = CommonSegment;
-        type IntoIter = std::vec::IntoIter<Self::Item>;
+        type IntoIter = smallvec::IntoIter<[Self::Item; 3]>;
         fn into_iter(self) -> Self::IntoIter {
             self.inner.into_iter()
         }
