@@ -73,6 +73,9 @@ impl UserId {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
+    pub fn empty() -> Self {
+        Self::new("")
+    }
 }
 impl_id_traits!(UserId);
 
@@ -246,6 +249,20 @@ impl Default for GenericId {
         Self::empty()
     }
 }
+pub struct PhantomGenericId;
+impl EnsureGenericId for PhantomGenericId {
+    type Error = ();
+    fn ensure_generic_id(_id: &GenericId) -> Result<Self, Self::Error> {
+        Ok(PhantomGenericId)
+    }
+}
+impl From<PhantomGenericId> for GenericId {
+    fn from(_id: PhantomGenericId) -> Self {
+        GenericId::empty()
+    }
+}
+#[allow(non_upper_case_globals)]
+pub const NonGenericId: Option<PhantomGenericId> = None;
 pub trait EnsureGenericId
 where
     Self: Sized + Into<GenericId>,

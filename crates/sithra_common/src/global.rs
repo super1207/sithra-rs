@@ -12,6 +12,10 @@ pub fn set_data_path(path: PathBuf) -> Result<(), BotError> {
 macro_rules! data_path {
     () => {
         $crate::global::DATA_PATH
-            .get_or_init(|| ::std::path::PathBuf::from(format!("./{}", env!("CARGO_PKG_NAME"))))
+            .get_or_init(|| {
+                let path = ::std::path::PathBuf::from(format!("./plugins/{}", env!("CARGO_PKG_NAME")));
+                ::std::fs::create_dir_all(&path).unwrap();
+                path
+            })
     };
 }

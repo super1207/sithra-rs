@@ -1,6 +1,6 @@
-use ioevent::event;
 use log::info;
-use sithra_common::prelude::*;
+use sithra_common::message::common::CommonMessage;
+use sithra_common::{msg, prelude::*};
 
 const SUBSCRIBERS: &[ioevent::Subscriber<()>] = &[];
 
@@ -14,8 +14,11 @@ async fn main(wright: &ioevent::EffectWright) {
     // 主循环
     loop {
         // 发送事件
-        let channel = Channel::new(1234567890);
-        let event = MessageReceived::new(None, channel, user, message);
-        wright.emit(event);
+        let channel = Channel::new(1234567890, ChannelType::Group);
+        let user = User::empty();
+        let message = msg!(CommonMessage[]);
+        let event = MessageReceived::new(NonGenericId, channel, user, message);
+        let result = wright.emit(&event);
+        log::error!("something wrong: {:?}", result);
     }
 }
