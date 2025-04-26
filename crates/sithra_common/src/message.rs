@@ -11,26 +11,26 @@ pub struct SegmentRaw {
 }
 
 impl SegmentRaw {
-    pub fn new(r#type: String, kv: KV) -> Self {
-        Self { r#type, kv }
+    pub fn new(r#type: impl ToString, kv: KV) -> Self {
+        Self { r#type: r#type.to_string(), kv }
     }
     // 基础消息段类型构造器
     /// 文本
-    pub fn text(text: String) -> Self {
+    pub fn text(text: impl ToString) -> Self {
         let mut kv = KV::new();
-        kv.insert("content".to_string(), text);
+        kv.insert("content".to_string(), text.to_string());
         Self::new("text".to_string(), kv)
     }
     /// 图片
-    pub fn img(url: String) -> Self {
+    pub fn img(url: impl ToString) -> Self {
         let mut kv = KV::new();
-        kv.insert("url".to_string(), url);
+        kv.insert("url".to_string(), url.to_string());
         Self::new("image".to_string(), kv)
     }
     /// 提及用户
-    pub fn at(user_id: String) -> Self {
+    pub fn at(user_id: impl ToString) -> Self {
         let mut kv = KV::new();
-        kv.insert("user_id".to_string(), user_id);
+        kv.insert("user_id".to_string(), user_id.to_string());
         Self::new("at".to_string(), kv)
     }
 }
