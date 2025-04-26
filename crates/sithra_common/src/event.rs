@@ -3,15 +3,51 @@ use std::ops::Deref;
 use ioevent::Event;
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::message::{Message, MessageRaw};
-use crate::model::{Channel, UserId};
+use crate::message::*;
+use crate::model::*;
 
 #[derive(Debug, Clone, Deserialize, Serialize, Event)]
 pub struct MessageReceived<M: Message> {
-    pub channel: Channel,
-    pub user_id: UserId,
+    gid: GenericId,
+    channel: Channel,
+    user: User,
     #[serde(deserialize_with = "deserialize_message")]
-    pub message: M,
+    message: M,
+}
+impl<M: Message> MessageReceived<M> {
+    /// 创建一个消息接收事件
+    pub fn new(gid: Option<GenericId>, channel: Channel, user: User, message: M) -> Self {
+        Self {
+            gid: gid.unwrap_or_default(),
+            channel,
+            user,
+            message,
+        }
+    }
+    /// 获取聊天 ID
+    pub fn channel(&self) -> &Channel {
+        &self.channel
+    }
+    /// 获取用户
+    pub fn user(&self) -> Option<&User> {
+        if self.user.is_empty() {
+            None
+        } else {
+            Some(&self.user)
+        }
+    }
+    /// 获取用户(可能为空，必须自行判断)
+    pub unsafe fn fetch_user(&self) -> &User {
+        &self.user
+    }
+    /// 获取消息
+    pub fn message(&self) -> &M {
+        &self.message
+    }
+    /// 获取聊天 ID
+    pub fn gid<T: EnsureGenericId>(&self) -> Result<T, T::Error> {
+        T::ensure_generic_id(&self.gid)
+    }
 }
 impl<M: Message> Deref for MessageReceived<M> {
     type Target = M;
