@@ -60,16 +60,19 @@ pub mod prelude {
 }
  */
 
+pub mod api;
 pub mod error;
 pub mod event;
 pub mod global;
 pub mod log;
 pub mod message;
 pub mod model;
+pub mod util;
 pub use micromap as map;
 pub use sithra_macro::*;
 pub use smallvec as vec;
 pub mod prelude {
+    pub use crate::api::*;
     pub use crate::error::*;
     pub use crate::event::*;
     pub use crate::global;
