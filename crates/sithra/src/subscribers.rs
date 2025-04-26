@@ -9,6 +9,7 @@ use reflect::reflect_subscriber;
 use crate::client::ClientState;
 
 pub const SUBSCRIBERS: &[Subscriber<ClientState>] = &[
+/* old version
     create_subscriber!(api_send_private_msg),
     create_subscriber!(api_send_group_msg),
     create_subscriber!(api_delete_msg),
@@ -24,7 +25,7 @@ pub const SUBSCRIBERS: &[Subscriber<ClientState>] = &[
     create_subscriber!(api_get_group_member_info),
     create_subscriber!(api_get_group_member_list),
     create_subscriber!(api_get_msg),
-    create_subscriber!(api_create_forward_msg),
+    create_subscriber!(api_create_forward_msg), */
     create_subscriber!(reflect_subscriber),
     create_subscriber!(log_subscriber),
     create_subscriber!(tracing_subscriber),

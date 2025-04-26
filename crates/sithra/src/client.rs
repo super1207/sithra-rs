@@ -14,6 +14,7 @@ use ioevent::{
 };
 use log::error;
 use rand::{RngCore, SeedableRng, rngs::SmallRng};
+/* old version
 use sithra_common::{
     api::{
         ApiRequest, ApiRequestKind,
@@ -26,17 +27,32 @@ use sithra_common::{
         event_internal::{InternalOnebotEvent, InternalOnebotEventKind},
     },
     message,
-};
+}; */
 use tokio::{
     net::TcpStream,
     sync::{Mutex, mpsc, oneshot},
 };
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, tungstenite::Message};
 
-pub use api_receiver::*;
+/* pub use api_receiver::*;
 pub use api_sender::*;
-pub use msg_receiver::*;
+pub use msg_receiver::*; */
 
+#[derive(Clone)]
+pub struct ClientState {
+   /* old version
+    pub api_sender: mpsc::UnboundedSender<ApiRequest>,
+    pub api_shooters: Arc<DashMap<String, oneshot::Sender<Result<ApiResponse, ApiError>>>>, */
+    pub pcw: DefaultProcedureWright,
+    pub self_id: u64,
+}
+impl ProcedureCallWright for ClientState {
+    fn next_echo(&self) -> impl Future<Output = u64> + Send {
+        self.pcw.next_echo()
+    }
+}
+
+/* old version
 #[derive(Clone)]
 pub struct ClientState {
     pub api_sender: mpsc::UnboundedSender<ApiRequest>,
@@ -176,7 +192,7 @@ mod api_sender {
 mod api_receiver {
     use futures_util::future::err;
     use log::{debug, info};
-    use sithra_common::api::api_internal::OnlyEcho;
+    /* use sithra_common::api::api_internal::OnlyEcho; */
 
     use super::*;
     pub struct ApiReceiverWsState {
@@ -264,3 +280,4 @@ impl App {
         })
     }
 }
+ */

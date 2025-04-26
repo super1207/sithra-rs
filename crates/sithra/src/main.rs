@@ -58,6 +58,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let (bus, wright) = builder.build();
+    /* old version
     let App {
         state,
         mut msg_receiver,
@@ -69,10 +70,10 @@ async fn main() -> anyhow::Result<()> {
         wright,
         config.base.self_id,
     )
-    .await?;
+    .await?; */
 
     log::info!("成功连接到 WebSocket 服务器");
-
+    /* old version
     let cancel_token = CancellationToken::new();
 
     let cancel_token_clone = cancel_token.clone();
@@ -125,5 +126,6 @@ async fn main() -> anyhow::Result<()> {
             }
         }
     }
+    */
     Ok(())
 }

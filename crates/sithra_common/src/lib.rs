@@ -1,6 +1,6 @@
+/* old version
 pub mod api;
 pub mod event;
-pub mod log;
 pub mod message;
 pub mod traits;
 pub use sithra_macro::*;
@@ -58,3 +58,6 @@ pub mod prelude {
     pub use crate::state::*;
     pub use sithra_macro::*;
 }
+ */
+
+pub mod log;
