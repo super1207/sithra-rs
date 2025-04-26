@@ -73,10 +73,11 @@ where
     fn from_raw(raw: MessageRaw) -> Self {
         Self::from_raw_iter(raw.segments)
     }
-    fn into_raw(self) -> SVec<SegmentRaw> {
+    fn into_raw(self) -> MessageRaw {
         self.into_iter()
             .filter_map(<Self::Segment as Segment>::Serializer::serialize)
-            .collect()
+            .collect::<SVec<_>>()
+            .into()
     }
 }
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -93,9 +94,14 @@ impl From<MessageRaw> for SVec<SegmentRaw> {
         value.segments
     }
 }
+impl From<SVec<SegmentRaw>> for MessageRaw {
+    fn from(value: SVec<SegmentRaw>) -> Self {
+        Self::new(value)
+    }
+}
 impl<T: Message> From<T> for MessageRaw {
     fn from(value: T) -> Self {
-        Self::new(value.into_raw())
+        Self::new(value.into_raw().into())
     }
 }
 
@@ -125,6 +131,15 @@ pub mod common {
             }
         }
     }
+    impl Segment for CommonSegment {
+        type Serializer = CommonMessageProcessor;
+        type Deserializer = CommonMessageProcessor;
+    }
+    /// 一般消息类型。
+    #[derive(Debug, Clone)]
+    pub struct CommonMessage {
+        inner: SVec<CommonSegment>,
+    }
     pub struct CommonMessageProcessor;
     impl MessageSerializer for CommonMessageProcessor {
         type Input = CommonSegment;
@@ -145,15 +160,6 @@ pub mod common {
                 kind,
             })
         }
-    }
-    impl Segment for CommonSegment {
-        type Serializer = CommonMessageProcessor;
-        type Deserializer = CommonMessageProcessor;
-    }
-    /// 一般消息类型。
-    #[derive(Debug, Clone)]
-    pub struct CommonMessage {
-        inner: SVec<CommonSegment>,
     }
     impl IntoIterator for CommonMessage {
         type Item = CommonSegment;
