@@ -42,9 +42,9 @@ async fn main() -> anyhow::Result<()> {
         let path = entry.path();
         if path.is_file() {
             let mut child = Command::new(&path);
-            let plugin_name = path.file_name();
+            let plugin_name = path.file_stem();
             if let Some(Some(name)) = plugin_name.map(|s| s.to_str()) {
-                let data_path = plugin_path.join(name);
+                let data_path = plugin_path.join(format!("{}.data", name));
                 create_dir_all(&data_path).await?;
                 let data_path = fs::canonicalize(&data_path).await?;
                 child.arg(data_path);

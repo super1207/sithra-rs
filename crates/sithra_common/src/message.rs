@@ -12,7 +12,10 @@ pub struct SegmentRaw {
 
 impl SegmentRaw {
     pub fn new(r#type: impl ToString, kv: KV) -> Self {
-        Self { r#type: r#type.to_string(), kv }
+        Self {
+            r#type: r#type.to_string(),
+            kv,
+        }
     }
     // 基础消息段类型构造器
     /// 文本
@@ -79,6 +82,8 @@ where
     fn id(&self) -> Option<MessageId>;
     /// 从消息段数组生成消息，仅用于发送！
     fn from_array<const N: usize>(array: [Self::Segment; N]) -> Self;
+    /// 获取消息段引用迭代器
+    fn iter(&self) -> impl Iterator<Item = &Self::Segment>;
 }
 /// 原始消息
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -210,6 +215,39 @@ pub mod common {
             let segments = array.into_iter().collect();
             Self {
                 id: None,
+                inner: segments,
+            }
+        }
+        fn iter(&self) -> impl Iterator<Item = &Self::Segment> {
+            self.inner.iter()
+        }
+    }
+
+    pub trait CommonMessageExt {
+        fn starts_with(&self, prefix: &str) -> bool;
+        fn trim_start_matches(self, prefix: &str) -> Self;
+    }
+    impl CommonMessageExt for CommonMessage {
+        fn starts_with(&self, prefix: &str) -> bool {
+            if let Some(text) = self.iter().next() {
+                if let CommonSegment::Text(text) = text {
+                    text.starts_with(prefix)
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
+        }
+        fn trim_start_matches(self, prefix: &str) -> Self {
+            let mut segments = self.inner.clone();
+            if let Some(text) = segments.get_mut(0) {
+                if let CommonSegment::Text(text) = text {
+                    *text = text.trim_start_matches(prefix).to_string();
+                }
+            }
+            Self {
+                id: self.id,
                 inner: segments,
             }
         }

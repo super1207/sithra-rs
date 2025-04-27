@@ -184,6 +184,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "echo"
+version = "0.1.0"
+dependencies = [
+ "ioevent",
+ "log",
+ "sithra_common",
+ "tokio",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
