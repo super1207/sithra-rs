@@ -22,10 +22,6 @@ mod base {
         pub fn new(generic_id: GenericId, call: C) -> Self {
             Self { generic_id, call }
         }
-        /// 匹配通用ID
-        pub fn match_generic_id(&self, generic_id: &GenericId) -> bool {
-            &self.generic_id == generic_id
-        }
     }
     impl<C: ProcedureCall + SithraCallRequest> ProcedureCall for SithraCall<C> {
         fn path() -> String {

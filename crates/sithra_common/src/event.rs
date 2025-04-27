@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use ioevent::Event;
-use ioevent::rpc::{ProcedureCall};
+use ioevent::rpc::ProcedureCall;
 use serde::Deserializer;
 use serde::{Deserialize, Serialize};
 
@@ -72,7 +72,9 @@ impl<M: Message> MessageEvent<M> {
     }
     /// 构造删除请求体(消息ID不为空时)
     pub fn build_delete(&self) -> Option<SithraCall<DeleteMessage>> {
-        self.message().id().map(|id| self.build_request(DeleteMessage::new(id)))
+        self.message()
+            .id()
+            .map(|id| self.build_request(DeleteMessage::new(id)))
     }
 }
 impl<M: Message> Deref for MessageEvent<M> {
