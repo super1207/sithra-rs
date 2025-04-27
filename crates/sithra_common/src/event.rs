@@ -25,6 +25,7 @@ pub struct MessageEvent<M: Message> {
     channel: Channel,
     user: User,
     #[serde(deserialize_with = "deserialize_message")]
+    #[serde(serialize_with = "serialize_message::<_, M>")]
     message: M,
 }
 impl<M: Message> SithraEvent for MessageEvent<M> {
@@ -135,7 +136,11 @@ pub enum MessageActionType<M: Message> {
     /// 删除
     Delete,
     /// 编辑(新消息)
-    Edit(#[serde(deserialize_with = "deserialize_message")] M),
+    Edit(
+        #[serde(serialize_with = "serialize_message::<_, M>")]
+        #[serde(deserialize_with = "deserialize_message")]
+        M,
+    ),
 }
 /// 反序列化消息操作类型
 pub fn deserialize_message_action_type<'de, D, M>(

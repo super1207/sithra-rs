@@ -1,5 +1,5 @@
 use micromap::Map;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::model::{KV, MessageId, SVec};
 
@@ -261,6 +261,13 @@ where
 {
     let raw = MessageRaw::deserialize(deserializer)?;
     Ok(M::from_raw(raw))
+}
+pub fn serialize_message<S: Serializer, M: Message>(
+    message: &M,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    let raw = message.clone().into_raw();
+    raw.serialize(serializer)
 }
 /// 接收消息段类型和消息段列表，返回消息类型
 /// 例子：
