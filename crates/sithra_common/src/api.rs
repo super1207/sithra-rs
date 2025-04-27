@@ -9,6 +9,8 @@ pub use base::*;
 mod base {
     use std::ops::{Deref, DerefMut};
 
+    use crate::model::EnsureGenericId;
+
     use super::*;
     /// 基础请求
     #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,6 +31,9 @@ mod base {
         }
         pub fn take_generic_id(self) -> GenericId {
             self.generic_id
+        }
+        pub fn match_adapter<T: EnsureGenericId>(&self) -> bool {
+            T::match_adapter(&self.generic_id)
         }
     }
     impl<C: ProcedureCall + SithraCallRequest> Deref for SithraCall<C> {

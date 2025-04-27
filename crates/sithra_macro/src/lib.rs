@@ -1,8 +1,8 @@
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::meta::ParseNestedMeta;
 use syn::parse::Result;
-use syn::parse_macro_input;
+use syn::{parse_macro_input, FnArg, ItemFn};
 
 #[derive(Default)]
 struct EffectLoopArgs {
@@ -89,4 +89,123 @@ pub fn main(args: TokenStream, input: TokenStream) -> TokenStream {
         #output
     }
     .into()
+}
+
+
+#[proc_macro_attribute]
+pub fn adapt_api(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let type_param = parse_macro_input!(attr as syn::Type);
+    let original_fn = parse_macro_input!(item as ItemFn);
+
+    if original_fn.sig.asyncness.is_none() {
+        return quote! { compile_error!("procedure macro can only be applied to async functions"); }.into();
+    }
+    
+    let params = original_fn.sig.inputs.iter().collect::<Vec<_>>();
+    let (state_param, event_param) = match params.len() {
+        1 => (None, params[0]),
+        2 => (Some(params[0]), params[1]),
+        _ => panic!("Expected 1 or 2 parameters"),
+    };
+
+    let (event_ty, event_name) = match event_param {
+        FnArg::Typed(pat_type) => (&pat_type.ty, &pat_type.pat),
+        _ => panic!("Event parameter must be a typed parameter"),
+    };
+
+    let state_ty_name = state_param.map(|param| match param {
+        FnArg::Typed(pat_type) => (&pat_type.ty, &pat_type.pat),
+        _ => panic!("State parameter must be a typed parameter"),
+    });
+    
+    let raw_generics = &original_fn.sig.generics.type_params().map(|v|v.clone()).collect::<Vec<_>>();
+
+    let (generics, new_params) = if let Some((state_ty, state_name)) = state_ty_name {
+        let params = quote! {
+            #state_name: &#state_ty,
+            #event_name: &::ioevent::event::EventData,
+        };
+        (quote! { <#(#raw_generics),*> }, params)
+    } else {
+        let params = quote! {
+            _state: &::ioevent::state::State<_STATE>,
+            #event_name: &::ioevent::event::EventData,
+        };
+        (quote! { <#(#raw_generics),* _STATE: ::ioevent::state::ProcedureCallWright + ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'static> }, params)
+    };
+
+    let event_try_into = quote! {
+        let #event_name: ::core::result::Result<::ioevent::state::ProcedureCallData, ::ioevent::error::TryFromEventError> = ::std::convert::TryInto::try_into(#event_name);
+    };
+
+    let state_clone = if let Some((_, state_name)) = state_ty_name {
+        quote! {
+            let #state_name = ::std::clone::Clone::clone(#state_name);
+        }
+    } else {
+        quote! {
+            let _state = ::std::clone::Clone::clone(_state);
+        }
+    };
+
+    let original_stmts = &original_fn.block.stmts;
+
+    let async_block = if let Some((_, state_name)) = state_ty_name {
+        quote! {
+            async move {
+                let #event_name = #event_name?;
+                if <#event_ty as ::ioevent::state::ProcedureCallRequest>::match_self(&#event_name) {
+                    let echo = #event_name.echo;
+                    let #event_name = <#event_ty as ::std::convert::TryFrom<::ioevent::state::ProcedureCallData>>::try_from(#event_name)?;
+                    if !#event_name.match_adapter::<#type_param>() {
+                        return Ok(());
+                    }
+                    let response: ::core::result::Result<_, ::ioevent::error::CallSubscribeError> = {
+                        #(#original_stmts)*
+                    };
+                    ::ioevent::state::ProcedureCallExt::resolve::<#event_ty>(&#state_name, echo, &response?).await?;
+                }
+                Ok(())
+            }
+        }
+    } else {
+        quote! {
+            async move {
+                let #event_name = #event_name?;
+                if <#event_ty as ::ioevent::state::ProcedureCallRequest>::match_self(&#event_name) {
+                    let echo = #event_name.echo;
+                    let #event_name = <#event_ty as ::std::convert::TryFrom<::ioevent::state::ProcedureCallData>>::try_from(#event_name)?;
+                    let response: ::core::result::Result<_, ::ioevent::error::CallSubscribeError> = {
+                        #(#original_stmts)*
+                    };
+                    ::ioevent::state::ProcedureCallExt::resolve::<#event_ty>(&_state, echo, &response?).await?;
+                }
+                Ok(())
+            }
+        }
+    };
+
+    let func_name = &original_fn.sig.ident;
+    let mod_name = format_ident!("{}", func_name);
+
+    let vis = &original_fn.vis;
+
+    let mod_block = quote! {
+        #[doc(hidden)]
+        #vis mod #mod_name {
+            use super::*;
+            pub type _Event = ::ioevent::state::ProcedureCallData;
+        }
+    };
+
+    let expanded = quote! {
+        #vis fn #func_name #generics (#new_params) -> ::ioevent::future::SubscribeFutureRet {
+            #event_try_into
+            #state_clone
+            ::std::boxed::Box::pin(#async_block)
+        }
+        #mod_block
+    };
+
+    TokenStream::from(expanded)
 }

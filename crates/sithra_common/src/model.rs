@@ -158,7 +158,12 @@ pub struct User {
     nick: Option<String>,
 }
 impl User {
-    pub fn new(uid: impl Into<UserId>, name: impl ToString, nick: Option<String>, avatar: Option<String>) -> Self {
+    pub fn new(
+        uid: impl Into<UserId>,
+        name: impl ToString,
+        nick: Option<String>,
+        avatar: Option<String>,
+    ) -> Self {
         Self {
             uid: uid.into(),
             name: name.to_string(),
@@ -269,4 +274,7 @@ where
 {
     type Error: Default;
     fn ensure_generic_id(id: &GenericId) -> Result<Self, Self::Error>;
+    fn match_adapter(_id: &GenericId) -> bool {
+        true
+    }
 }
