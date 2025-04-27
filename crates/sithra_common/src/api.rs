@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 
 pub use base::*;
 mod base {
+    use std::ops::{Deref, DerefMut};
+
     use super::*;
     /// 基础请求
     #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -21,6 +23,23 @@ mod base {
         /// 创建一个基础请求
         pub fn new(generic_id: GenericId, call: C) -> Self {
             Self { generic_id, call }
+        }
+        pub fn take_call(self) -> C {
+            self.call
+        }
+        pub fn take_generic_id(self) -> GenericId {
+            self.generic_id
+        }
+    }
+    impl<C: ProcedureCall + SithraCallRequest> Deref for SithraCall<C> {
+        type Target = C;
+        fn deref(&self) -> &Self::Target {
+            &self.call
+        }
+    }
+    impl<C: ProcedureCall + SithraCallRequest> DerefMut for SithraCall<C> {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.call
         }
     }
     impl<C: ProcedureCall + SithraCallRequest> ProcedureCall for SithraCall<C> {
