@@ -64,7 +64,7 @@ mod base {
 #[derive(Debug, Clone, Serialize, Deserialize, ProcedureCall)]
 pub struct SendMessage {
     message: MessageRaw,
-    channel: Channel,
+    pub channel: Channel,
 }
 impl SendMessage {
     pub fn new<M: Message>(message: M, channel: Channel) -> Self {
@@ -72,6 +72,9 @@ impl SendMessage {
             message: message.into_raw(),
             channel,
         }
+    }
+    pub fn message<M: Message>(&self) -> M {
+        M::from_raw(self.message.clone())
     }
 }
 impl SithraCallRequest for SendMessage {
@@ -86,7 +89,7 @@ impl ProcedureCallResponse for SendMessageResponse {}
 /// 删除消息
 #[derive(Debug, Clone, Serialize, Deserialize, ProcedureCall)]
 pub struct DeleteMessage {
-    message_id: MessageId,
+    pub message_id: MessageId,
 }
 impl DeleteMessage {
     pub fn new(message_id: MessageId) -> Self {
