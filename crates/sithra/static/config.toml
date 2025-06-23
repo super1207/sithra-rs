@@ -1,3 +1,0 @@
-[base]
-# 支持的日志级别: debug, info, warn, error, trace
-log-level = "info" # 请修改为你的日志级别

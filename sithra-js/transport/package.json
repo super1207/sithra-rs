@@ -1,0 +1,11 @@
+{
+  "name": "sithra-transport",
+  "version": "0.1.0",
+  "description": "sithra transport",
+  "license": "Unlicense",
+  "author": "",
+  "type": "module",
+  "main": "dist/test.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist/**/*"]
+}

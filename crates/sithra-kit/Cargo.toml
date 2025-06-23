@@ -1,0 +1,26 @@
+[package]
+name = "sithra-kit"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+tokio.workspace = true
+tokio-util.workspace = true
+futures-util.workspace = true
+rmp-serde.workspace = true
+rmpv.workspace = true
+pin-project.workspace = true
+bytes.workspace = true
+thiserror.workspace = true
+ulid.workspace = true
+serde.workspace = true
+either.workspace = true
+sithra-transport.workspace = true
+sithra-types.workspace = true
+smallvec.workspace = true
+tower.workspace = true
+matchit.workspace = true
+triomphe.workspace = true
+
+[lints]
+workspace = true
