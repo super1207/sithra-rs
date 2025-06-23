@@ -1,11 +1,10 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
-use sithra_types::channel::Channel;
 use thiserror::Error;
 use tokio_util::codec::{Decoder, Encoder};
 use ulid::Ulid;
 
-use crate::util::get_chunk;
+use crate::{channel::Channel, util::get_chunk};
 
 const UNASSIGNED_ID: Ulid = Ulid::from_bytes([0; 16]);
 

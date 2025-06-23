@@ -15,13 +15,14 @@ thiserror.workspace = true
 ulid.workspace = true
 serde.workspace = true
 either.workspace = true
-sithra-transport.workspace = true
-sithra-types.workspace = true
 smallvec.workspace = true
 tower.workspace = true
 matchit.workspace = true
 triomphe.workspace = true
 
+# Workspace dependencies
+
+sithra-kit.workspace = true
 
 [lints]
 workspace = true

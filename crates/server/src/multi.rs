@@ -553,7 +553,7 @@ mod tests {
     use futures_util::future::BoxFuture;
     use triomphe::Arc;
 
-    use crate::server::multi::{MultiError, MultiFutureJoin, MultiFutureRace};
+    use crate::multi::{MultiError, MultiFutureJoin, MultiFutureRace};
 
     #[tokio::test]
     async fn multi_future_all_completed() {

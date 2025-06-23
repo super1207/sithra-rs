@@ -2,7 +2,7 @@ use std::{convert::Infallible, fmt};
 
 use tower::Service;
 
-use crate::server::{
+use crate::{
     handler::Handler,
     multi::MultiServiceRaceAnyError,
     request::Request,

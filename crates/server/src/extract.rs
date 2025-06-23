@@ -7,7 +7,7 @@ use std::convert::Infallible;
 use sithra_transport::datapack::RequestDataPack;
 use triomphe::Arc;
 
-use crate::server::response::IntoResponse;
+use crate::response::IntoResponse;
 
 pub trait FromRequest<S>: Sized {
     /// If the extractor fails it'll use this "rejection" type. A rejection is

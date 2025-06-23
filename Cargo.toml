@@ -27,6 +27,8 @@ triomphe = { version = "0.1" }
 
 sithra-transport = { path = "crates/transport" }
 sithra-types = { path = "crates/types" }
+sithra-server = { path = "crates/server" }
+sithra-kit = { path = "crates/kit" }
 
 [workspace.lints.clippy]
 nursery = { level = "warn", priority = -1 }

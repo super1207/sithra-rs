@@ -12,7 +12,7 @@ use tower::{
 };
 use ulid::Ulid;
 
-use crate::server::{
+use crate::{
     request::Request,
     response::{IntoResponse, MapIntoResponse, Response},
 };

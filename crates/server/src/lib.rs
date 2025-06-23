@@ -1,6 +1,6 @@
 use std::convert::Infallible;
 
-use crate::server::{boxed::BoxedIntoRoute, handler::Handler, routing::endpoint::Endpoint};
+use crate::{boxed::BoxedIntoRoute, handler::Handler, routing::endpoint::Endpoint};
 
 pub mod boxed;
 pub mod extract;
@@ -50,7 +50,7 @@ mod tests {
     use tower::Service;
     use triomphe::Arc;
 
-    use crate::server::{
+    use crate::{
         extract::{payload::Payload, state::State},
         multi, on,
         request::Request,

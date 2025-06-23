@@ -15,7 +15,6 @@ thiserror.workspace = true
 ulid.workspace = true
 serde.workspace = true
 either.workspace = true
-sithra-types.workspace = true
 
 [lints]
 workspace = true

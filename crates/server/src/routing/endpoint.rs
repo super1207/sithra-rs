@@ -2,7 +2,7 @@ use std::convert::Infallible;
 
 use tower::{Layer, Service};
 
-use crate::server::{
+use crate::{
     boxed::BoxedIntoRoute, request::Request, response::IntoResponse, routing::route::Route,
 };
 

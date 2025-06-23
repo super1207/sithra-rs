@@ -4,7 +4,7 @@ use serde::de::DeserializeOwned;
 use sithra_transport::datapack::RequestDataPack;
 use triomphe::Arc;
 
-use crate::server::{extract::FromRequest, response};
+use crate::{extract::FromRequest, response};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct Payload<T>(pub T);

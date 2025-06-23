@@ -6,7 +6,7 @@ use std::{
 
 use tower::Service;
 
-use crate::server::{
+use crate::{
     request::Request,
     response::Response,
     routing::{route::RouteFuture, router::Router},

@@ -490,8 +490,7 @@ dependencies = [
  "rmp-serde",
  "rmpv",
  "serde",
- "sithra-transport",
- "sithra-types",
+ "sithra-kit",
  "smallvec",
  "thiserror",
  "tokio",
@@ -513,8 +512,31 @@ dependencies = [
  "rmp-serde",
  "rmpv",
  "serde",
+ "sithra-server",
  "sithra-transport",
  "sithra-types",
+ "smallvec",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+ "tower",
+ "triomphe",
+ "ulid",
+]
+
+[[package]]
+name = "sithra-server"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "either",
+ "futures-util",
+ "matchit",
+ "pin-project",
+ "rmp-serde",
+ "rmpv",
+ "serde",
+ "sithra-transport",
  "smallvec",
  "thiserror",
  "tokio",
@@ -535,7 +557,6 @@ dependencies = [
  "rmp-serde",
  "rmpv",
  "serde",
- "sithra-types",
  "thiserror",
  "tokio",
  "tokio-util",
@@ -547,6 +568,7 @@ name = "sithra-types"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "sithra-server",
 ]
 
 [[package]]

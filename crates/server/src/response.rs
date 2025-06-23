@@ -11,7 +11,7 @@ use sithra_transport::datapack::ResponseDataPack;
 use tower::Service;
 use ulid::Ulid;
 
-use crate::server::{extract::payload::Payload, request::Request};
+use crate::{extract::payload::Payload, request::Request};
 
 pub struct Response {
     pub data: Option<ResponseDataPack>,
