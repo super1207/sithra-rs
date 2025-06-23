@@ -339,8 +339,6 @@ where
             Ok(match_) => {
                 let id = *match_.value;
 
-                // url_params::insert_url_params(&mut parts.extensions, match_.params);
-
                 let endpoint = self
                     .routes
                     .get(&id)
@@ -355,8 +353,7 @@ where
                     Endpoint::Route(route) => Ok(route.clone().call_owned(req)),
                 }
             }
-            // explicitly handle all variants in case matchit adds
-            // new ones we need to handle differently
+
             Err(MatchError::NotFound) => Err((Request::from_raw(raw), state)),
         }
     }
