@@ -125,6 +125,12 @@ where
         })
     }
 
+    #[track_caller]
+    #[must_use]
+    pub fn route_typed(self, (path, method_router): (&str, Endpoint<S>)) -> Self {
+        self.route(path, method_router)
+    }
+
     /// # Panics
     /// Panics if the service is a `Router`.
     #[must_use]

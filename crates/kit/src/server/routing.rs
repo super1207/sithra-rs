@@ -15,6 +15,7 @@ use crate::server::{
 pub mod endpoint;
 pub mod route;
 pub mod router;
+pub mod typed;
 
 /// A [`Router`] converted into a borrowed [`Service`] with a fixed body type.
 ///

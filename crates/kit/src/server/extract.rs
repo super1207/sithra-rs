@@ -2,6 +2,8 @@ pub mod from_ref;
 pub mod payload;
 pub mod state;
 
+use std::convert::Infallible;
+
 use sithra_transport::datapack::RequestDataPack;
 use triomphe::Arc;
 
@@ -17,4 +19,12 @@ pub trait FromRequest<S>: Sized {
         req: Arc<RequestDataPack>,
         state: &S,
     ) -> impl Future<Output = Result<Self, Self::Rejection>> + Send;
+}
+
+impl<S: Sync> FromRequest<S> for () {
+    type Rejection = Infallible;
+
+    async fn from_request(_req: Arc<RequestDataPack>, _state: &S) -> Result<Self, Self::Rejection> {
+        Ok(())
+    }
 }
