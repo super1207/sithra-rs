@@ -9,6 +9,7 @@ serde.workspace = true
 # Workspace dependencies
 
 sithra-server.workspace = true
+sithra-transport.workspace = true
 
 [lints]
 workspace = true

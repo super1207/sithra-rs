@@ -91,6 +91,10 @@ mod tests {
                 }),
             )
             .route("/count2", on(count2))
+            .route(
+                "/any",
+                on(async |Payload(_payload): Payload<rmpv::Value>| {}),
+            )
             .with_state(state.clone());
 
         router

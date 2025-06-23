@@ -1,4 +1,4 @@
-import type { DataPack } from ".."
+import type { DataPack, RequestDataPack, ResponseDataPack } from ".."
 import { encode as msgpackEncode, decode as msgpackDecode } from "@msgpack/msgpack";
 
 export function encode(data: unknown): Uint8Array<ArrayBuffer> {
@@ -21,7 +21,7 @@ export function tryDecodeFromRawWithLength(length: number, buffer: Buffer): [unk
   if (buffer.byteLength < length) {
     return null;
   }
-  const data = buffer.subarray(0 ,length);
+  const data = buffer.subarray(0, length);
   return [decodeFromRaw(data), buffer.subarray(length)];
 }
 
@@ -33,12 +33,12 @@ export function tryDecodeFromRaw(buffer: Buffer): [unknown, Buffer] | null | num
   return tryDecodeFromRawWithLength(length, buffer) ?? length;
 }
 
-export interface Codec<T> {
-  decode(chunk: Buffer): T | null;
-  encode(data: T): Buffer;
+export interface Codec<D, E> {
+  decode(chunk: Buffer): D | null;
+  encode(data: E): Buffer;
 }
 
-export class DataPackCodec implements Codec<DataPack<unknown>> {
+export class DataPackCodec implements Codec<RequestDataPack<unknown>, ResponseDataPack<unknown>> {
   deBuffer: Buffer
   enBuffer: Buffer
   dataLength: number | null
@@ -49,7 +49,7 @@ export class DataPackCodec implements Codec<DataPack<unknown>> {
     this.dataLength = null;
   }
 
-  decode(chunk: Buffer): DataPack<unknown> | null {
+  decode(chunk: Buffer): RequestDataPack<unknown> | null {
     this.deBuffer = Buffer.concat([this.deBuffer, chunk]);
     if (this.deBuffer.byteLength <= 0) {
       return null;
@@ -64,10 +64,13 @@ export class DataPackCodec implements Codec<DataPack<unknown>> {
     let [data, remainingBuffer] = tryDecodeFromRawWithLength(this.dataLength, this.deBuffer) ?? [null, this.deBuffer];
     this.deBuffer = remainingBuffer;
     this.dataLength = null;
-    return data as DataPack<unknown>;
+    if (!(data as any)["path"]) {
+      return null;
+    }
+    return data as RequestDataPack<unknown>;
   }
 
-  encode(data: DataPack<unknown>): Buffer {
+  encode(data: ResponseDataPack<unknown>): Buffer {
     return Buffer.from(encode(data))
   }
 }

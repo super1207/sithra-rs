@@ -23,38 +23,6 @@ pub trait Handler<T, S>: Clone + Send + Sync + Sized + 'static {
     /// Call the handler with the given request.
     fn call(self, req: Request, state: S) -> Self::Future;
 
-    /// Apply a [`tower::Layer`] to the handler.
-    ///
-    /// All requests to the handler will be processed by the layer's
-    /// corresponding middleware.
-    ///
-    /// This can be used to add additional processing to a request for a single
-    /// handler.
-    ///
-    /// Note this differs from
-    /// [`routing::Router::layer`](crate::routing::Router::layer) which adds
-    /// a middleware to a group of routes.
-    ///
-    /// If you're applying middleware that produces errors you have to handle
-    /// the errors so they're converted into responses. You can learn more
-    /// about doing that [here](crate::error_handling).
-    ///
-    /// # Example
-    ///
-    /// Adding the [`tower::limit::ConcurrencyLimit`] middleware to a handler
-    /// can be done like so:
-    ///
-    /// ```rust
-    /// use axum::{Router, handler::Handler, routing::get};
-    /// use tower::limit::{ConcurrencyLimit, ConcurrencyLimitLayer};
-    ///
-    /// async fn handler() { /* ... */
-    /// }
-    ///
-    /// let layered_handler = handler.layer(ConcurrencyLimitLayer::new(64));
-    /// let app = Router::new().route("/", get(layered_handler));
-    /// # let _: Router = app;
-    /// ```
     fn layer<L>(self, layer: L) -> Layered<L, Self, T, S>
     where
         L: Layer<HandlerService<Self, T, S>> + Clone,
@@ -143,10 +111,7 @@ where
 
 /// An adapter that makes a [`Handler`] into a [`Service`].
 ///
-/// Created with [`Handler::with_state`] or
-/// [`HandlerWithoutStateExt::into_service`].
-///
-/// [`HandlerWithoutStateExt::into_service`]: super::HandlerWithoutStateExt::into_service
+/// Created with [`Handler::with_state`]
 pub struct HandlerService<H, T, S> {
     handler: H,
     state:   S,
@@ -219,21 +184,23 @@ where
 }
 
 #[pin_project]
-/// The response future for [`IntoService`](super::IntoService).
 pub struct IntoServiceFuture<F> {
     #[pin]
     future: Map<F, fn(Response) -> Result<Response, Infallible>>,
 }
+
 impl<F> IntoServiceFuture<F> {
     pub(crate) fn new(future: Map<F, fn(Response) -> Result<Response, Infallible>>) -> Self {
         Self { future }
     }
 }
+
 impl<F> fmt::Debug for IntoServiceFuture<F> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct(stringify!(IntoServiceFuture)).finish_non_exhaustive()
     }
 }
+
 impl<F> Future for IntoServiceFuture<F>
 where
     Map<F, fn(Response) -> Result<Response, Infallible>>: Future,
@@ -247,7 +214,7 @@ where
 }
 
 #[pin_project]
-/// The response future for [`Layered`](super::Layered).
+/// The response future for [`Layered`](Layered).
 pub struct LayeredFuture<S>
 where
     S: Service<Request>,

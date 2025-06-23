@@ -17,9 +17,6 @@ pub mod route;
 pub mod router;
 pub mod typed;
 
-/// A [`Router`] converted into a borrowed [`Service`] with a fixed body type.
-///
-/// See [`Router::as_service`] for more details.
 pub struct RouterAsService<'a, S = ()> {
     router: &'a mut Router<S>,
 }
@@ -49,9 +46,6 @@ where
     }
 }
 
-/// A [`Router`] converted into an owned [`Service`] with a fixed body type.
-///
-/// See [`Router::into_service`] for more details.
 pub struct RouterIntoService<S = ()> {
     router: Router<S>,
 }

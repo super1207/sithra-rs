@@ -6,6 +6,10 @@ macro_rules! typed {
         typed!(@private A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);
         #[allow(dead_code)]
         impl $typed {
+            #[doc = "Create a new endpoint for the given route and handler.\n\n"]
+            #[doc = concat!("Path: `", $route, "`\n\n")]
+            #[doc = "Allowed parameters:\n\n"]
+            $(#[doc = concat!(" - `", stringify!($T), "`\n")])*
             pub fn on<H, T, S>(handler: H) -> (&'static str, $crate::routing::endpoint::Endpoint<S, ::std::convert::Infallible>)
             where
                 H: $crate::handler::Handler<T, S>,
