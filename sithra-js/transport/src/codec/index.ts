@@ -38,6 +38,8 @@ export interface Codec<D, E> {
   encode(data: E): Buffer;
 }
 
+export type IDataPackCodec = Codec<RequestDataPack<unknown>, ResponseDataPack<unknown>>;
+
 export class DataPackCodec implements Codec<RequestDataPack<unknown>, ResponseDataPack<unknown>> {
   deBuffer: Buffer
   enBuffer: Buffer

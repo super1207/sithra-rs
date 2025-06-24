@@ -1,5 +1,6 @@
 export * as codec from "./codec";
 export * as util from "./util";
+export * as peer from "./peer";
 
 export interface Channel {
   id: string,

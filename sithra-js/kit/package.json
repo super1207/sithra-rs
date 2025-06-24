@@ -1,0 +1,17 @@
+{
+  "name": "sithra-kit",
+  "version": "0.1.0",
+  "description": "sithra-kit in js",
+  "license": "Unlicense",
+  "author": "BERADQ",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
+  "dependencies": {
+    "regexparam": "^3.0.0",
+    "sithra-transport": "file:../transport"
+  }
+}

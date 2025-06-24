@@ -1,12 +1,12 @@
-import { DataPack } from ".";
-import { Codec } from "./codec";
+import { DataPack, RequestDataPack, ResponseDataPack } from ".";
+import { IDataPackCodec } from "./codec";
 import { asChunks, initStdio } from "./util";
 
 export class Peer {
-  codec: Codec<DataPack<unknown>>
+  codec: IDataPackCodec
   buffer: Buffer
-  listeners: Array<(data: DataPack<unknown>) => void>
-  constructor(codec: Codec<DataPack<unknown>>) {
+  listeners: Array<(data: RequestDataPack<unknown>) => void>
+  constructor(codec: IDataPackCodec) {
     this.codec = codec;
     this.buffer = Buffer.alloc(0);
     this.listeners = [];
@@ -20,10 +20,17 @@ export class Peer {
       }
     });
   }
-  onData(callback: (data: DataPack<unknown>) => void) {
+  onData(callback: (data: RequestDataPack<unknown>) => void) {
     this.listeners.push(callback);
   }
-  async send(data: DataPack<unknown>) {
+  route(path: string, callback: (data: RequestDataPack<unknown>) => void) {
+    this.onData((data) => {
+      if (data.path === path) {
+        callback(data)
+      }
+    })
+  }
+  async send(data: ResponseDataPack<unknown>) {
     const buffer = this.codec.encode(data);
     const buffers = asChunks(buffer);
     for (const chunk of buffers) {

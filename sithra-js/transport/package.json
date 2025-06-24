@@ -7,5 +7,7 @@
   "type": "module",
   "main": "dist/test.js",
   "types": "dist/index.d.ts",
-  "files": ["dist/**/*"]
+  "files": [
+    "dist/**/*"
+  ]
 }

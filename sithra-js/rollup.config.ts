@@ -5,7 +5,7 @@ import clean from "@rollup-extras/plugin-clean";
 
 export default defineConfig([
   {
-    input: ["transport/src/index.ts", "transport/src/test.ts"],
+    input: ["transport/src/index.ts"],
     output: {
       dir: "transport/dist",
       format: "module",
@@ -21,4 +21,21 @@ export default defineConfig([
     ],
     external: (id) => /node_modules/.test(id),
   },
+  {
+    input: ["kit/src/index.ts"],
+    output: {
+      dir: "kit/dist",
+      format: "module",
+      sourcemap: true,
+      preserveModules: true,
+    },
+    plugins: [
+      clean(),
+      nodeResolver(),
+      ts({
+        tsconfig: "kit/tsconfig.json",
+      }),
+    ],
+    external: (id) => /node_modules/.test(id),
+  }
 ]);
