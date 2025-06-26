@@ -1,3 +1,7 @@
+//! Utility functions for transport operations
+//!
+//! Provides helper functions for creating framed transports and chunking data.
+
 use bytes::BytesMut;
 use tokio::process::Child;
 use tokio_util::codec::Framed;
@@ -13,6 +17,14 @@ use crate::{
 /// Returns an error if the child process fails to start or if the framed
 /// transport fails to be created.
 #[allow(clippy::result_large_err)]
+/// Creates a framed transport for structured data communication with a child
+/// process
+///
+/// # Arguments
+/// * `child` - The child process to connect to
+///
+/// # Returns
+/// Framed transport using `DataPackCodec` for structured messages
 pub fn connect(child: Child) -> Result<Framed<Peer, DataPackCodec>, Child> {
     let peer = Peer::from_child(child)?;
     let codec = DataPackCodec::new();
@@ -26,6 +38,13 @@ pub fn connect(child: Child) -> Result<Framed<Peer, DataPackCodec>, Child> {
 /// Returns an error if the child process fails to start or if the framed
 /// transport fails to be created.
 #[allow(clippy::result_large_err)]
+/// Creates a framed transport for raw data communication with a child process
+///
+/// # Arguments
+/// * `child` - The child process to connect to
+///
+/// # Returns
+/// Framed transport using `RawDataPackCodec` for raw byte messages
 pub fn raw_connect(child: Child) -> Result<Framed<Peer, RawDataPackCodec>, Child> {
     let peer = Peer::from_child(child)?;
     let codec = RawDataPackCodec::new();
@@ -34,6 +53,10 @@ pub fn raw_connect(child: Child) -> Result<Framed<Peer, RawDataPackCodec>, Child
 
 /// Creates a framed transport using standard input and output.
 #[must_use]
+/// Creates a framed transport using standard input/output for structured data
+///
+/// # Returns
+/// Framed transport using `DataPackCodec` with stdin/stdout
 pub fn stdio() -> Framed<Peer, DataPackCodec> {
     let peer = Peer::new();
     let codec = DataPackCodec::new();
@@ -42,12 +65,23 @@ pub fn stdio() -> Framed<Peer, DataPackCodec> {
 
 /// Creates a framed transport using standard input and output.
 #[must_use]
+/// Creates a framed transport using standard input/output for raw data
+///
+/// # Returns
+/// Framed transport using `RawDataPackCodec` with stdin/stdout
 pub fn raw_stdio() -> Framed<Peer, RawDataPackCodec> {
     let peer = Peer::new();
     let codec = RawDataPackCodec::new();
     Framed::new(peer, codec)
 }
 
+/// Splits data into chunks of maximum 1024 bytes
+///
+/// # Arguments
+/// * `src` - The source buffer to chunk
+///
+/// # Returns
+/// Some(BytesMut) containing up to 1024 bytes, or None if empty
 pub fn get_chunk(src: &mut BytesMut) -> Option<BytesMut> {
     if src.is_empty() {
         None

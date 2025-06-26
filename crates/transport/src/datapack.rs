@@ -6,12 +6,19 @@ use ulid::Ulid;
 
 use crate::{channel::Channel, util::get_chunk};
 
+/// A raw data packet containing a length-prefixed byte buffer.
+///
+/// Used for low-level serialization/deserialization of data packets.
+/// The `data_len` field stores the length of the `data` field in bytes.
 pub struct RawDataPack {
     data_len: u32,
     data:     Bytes,
 }
 
 impl RawDataPack {
+    /// Creates a new `RawDataPack` from the given byte buffer.
+    ///
+    /// The `data_len` field is automatically calculated from the buffer length.
     const fn new(data: Bytes) -> Self {
         Self {
             data_len: data.len() as u32,
@@ -20,6 +27,10 @@ impl RawDataPack {
     }
 }
 
+/// A codec for encoding/decoding `RawDataPack` instances.
+///
+/// Maintains internal buffers for partial reads/writes and tracks
+/// the current packet length during decoding.
 pub struct RawDataPackCodec {
     data_len:  Option<u32>,
     de_buffer: BytesMut,
@@ -27,6 +38,7 @@ pub struct RawDataPackCodec {
 }
 
 impl RawDataPackCodec {
+    /// Creates a new `RawDataPackCodec` with empty buffers.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -38,6 +50,7 @@ impl RawDataPackCodec {
 }
 
 impl Default for RawDataPackCodec {
+    /// Creates a default `RawDataPackCodec` instance.
     fn default() -> Self {
         Self::new()
     }
@@ -46,6 +59,9 @@ impl Default for RawDataPackCodec {
 impl Encoder<RawDataPack> for RawDataPackCodec {
     type Error = std::io::Error;
 
+    /// Encodes a `RawDataPack` into the destination buffer.
+    ///
+    /// Writes the length prefix followed by the data payload.
     fn encode(&mut self, item: RawDataPack, dst: &mut BytesMut) -> Result<(), Self::Error> {
         self.en_buffer.put_u32(item.data_len);
         self.en_buffer.put(item.data);
@@ -60,6 +76,10 @@ impl Decoder for RawDataPackCodec {
     type Error = std::io::Error;
     type Item = RawDataPack;
 
+    /// Decodes a `RawDataPack` from the source buffer.
+    ///
+    /// Reads the length prefix first, then the data payload once enough bytes
+    /// are available.
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         self.de_buffer.put(src.split());
         if self.de_buffer.len() < 4 && self.data_len.is_none() {
@@ -82,6 +102,10 @@ impl Decoder for RawDataPackCodec {
     }
 }
 
+/// A structured data packet for communication between peers.
+///
+/// Contains optional metadata (`path`, `channel`), a correlation ID,
+/// and a `result` field that can be either a payload or an error.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DataPack {
     pub path:        Option<String>,
@@ -102,6 +126,10 @@ impl Default for DataPack {
     }
 }
 
+/// A request-specific data packet with required path and payload.
+///
+/// Used for initiating requests between peers, with optional channel
+/// metadata and a correlation ID for tracking.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct RequestDataPack {
     pub path:    String,
@@ -111,6 +139,7 @@ pub struct RequestDataPack {
 }
 
 impl Default for RequestDataPack {
+    /// Creates a default `RequestDataPack` with empty fields.
     fn default() -> Self {
         Self {
             path:        String::new(),
@@ -147,19 +176,27 @@ impl RequestDataPack {
     }
 
     #[must_use]
+    /// Returns the correlation ID of the `DataPack`.
     pub const fn correlation(&self) -> Ulid {
         self.correlation
     }
 }
 
+/// Represents the result of a data operation, either a payload or an error.
 #[derive(Debug, Deserialize, Serialize)]
 pub enum DataResult {
+    /// Successful operation with a payload value.
     #[serde(rename = "payload")]
     Payload(rmpv::Value),
+    /// Failed operation with an error message.
     #[serde(rename = "error")]
     Error(String),
 }
 
+/// Converts a `DataResult` into a standard `Result`.
+///
+/// - `Payload(v)` becomes `Ok(v)`
+/// - `Error(e)` becomes `Err(e)`
 impl From<DataResult> for Result<rmpv::Value, String> {
     fn from(value: DataResult) -> Self {
         match value {
@@ -169,6 +206,10 @@ impl From<DataResult> for Result<rmpv::Value, String> {
     }
 }
 
+/// Converts a standard `Result` into a `DataResult`.
+///
+/// - `Ok(payload)` becomes `Payload(payload.into())`
+/// - `Err(error)` becomes `Error(error.to_string())`
 impl<P, E> From<Result<P, E>> for DataResult
 where
     P: Into<rmpv::Value>,
@@ -182,6 +223,10 @@ where
     }
 }
 
+/// A builder for constructing `DataPack` instances with optional fields.
+///
+/// Provides a fluent interface for setting fields like `path`, `correlation`,
+/// `channel`, and `result` before building the final `DataPack`.
 pub struct DataPackBuilder {
     pub path:        Option<String>,
     pub correlation: Option<Ulid>,
@@ -196,6 +241,7 @@ impl Default for DataPackBuilder {
 }
 
 impl DataPackBuilder {
+    /// Creates a new `DataPackBuilder` with all fields set to `None`.
     #[must_use]
     pub const fn new() -> Self {
         Self {
@@ -206,6 +252,7 @@ impl DataPackBuilder {
         }
     }
 
+    /// Sets the `path` field for the `DataPack`.
     #[must_use]
     pub fn path(mut self, path: &impl ToString) -> Self {
         self.path = Some(path.to_string());
@@ -218,18 +265,25 @@ impl DataPackBuilder {
         self
     }
 
+    /// Sets the `channel` field for the `DataPack`.
     #[must_use]
     pub fn channel(mut self, id: impl Into<Channel>) -> Self {
         self.channel = Some(id.into());
         self
     }
 
+    /// Sets the `result` field for the `DataPack`.
     #[must_use]
     pub fn result(mut self, result: impl Into<DataResult>) -> Self {
         self.result = Some(result.into());
         self
     }
 
+    /// Builds the `DataPack` with the configured fields.
+    ///
+    /// Defaults:
+    /// - `correlation`: A new `Ulid` if not set.
+    /// - `result`: `DataResult::Payload(rmpv::Value::Nil)` if not set.
     #[must_use]
     pub fn build(self) -> DataPack {
         let Self {
@@ -251,23 +305,27 @@ impl DataPackBuilder {
         }
     }
 
+    /// Sets the `result` field to a `Payload` variant.
     #[must_use]
     pub fn payload(mut self, payload: impl Into<rmpv::Value>) -> Self {
         self.result = Some(DataResult::Payload(payload.into()));
         self
     }
 
+    /// Sets the `result` field to an `Error` variant.
     #[must_use]
     pub fn error(mut self, error: &impl ToString) -> Self {
         self.result = Some(DataResult::Error(error.to_string()));
         self
     }
 
+    /// Builds a `DataPack` with a `Payload` result.
     #[must_use]
     pub fn build_with_payload(self, payload: impl Into<rmpv::Value>) -> DataPack {
         self.payload(payload).build()
     }
 
+    /// Builds a `DataPack` with an `Error` result.
     #[must_use]
     pub fn build_with_error(self, error: &impl ToString) -> DataPack {
         self.error(error).build()
@@ -284,6 +342,10 @@ impl DataPack {
     ///
     /// # Errors
     /// Returns an error if the byte slice is not a valid `DataPack`.
+    /// Deserialize a `DataPack` from a byte slice.
+    ///
+    /// # Errors
+    /// Returns an error if the byte slice is not a valid `DataPack`.
     pub fn deserialize(bytes: &[u8]) -> Result<Self, rmp_serde::decode::Error> {
         rmp_serde::from_slice(bytes)
     }
@@ -292,10 +354,18 @@ impl DataPack {
     ///
     /// # Errors
     /// Returns an error if the `DataPack` cannot be serialized.
+    /// Serialize a `DataPack` into a byte slice.
+    ///
+    /// # Errors
+    /// Returns an error if the `DataPack` cannot be serialized.
     pub fn serialize(&self) -> Result<Bytes, rmp_serde::encode::Error> {
         rmp_serde::to_vec_named(self).map(Bytes::from)
     }
 
+    /// Serialize a `DataPack` into a raw byte slice.
+    ///
+    /// # Errors
+    /// Returns an error if the `DataPack` cannot be serialized.
     /// Serialize a `DataPack` into a raw byte slice.
     ///
     /// # Errors
@@ -310,20 +380,27 @@ impl DataPack {
     }
 
     #[must_use]
+    /// Checks if the `DataPack` represents a request (has a path).
     pub const fn is_request(&self) -> bool {
         self.path.is_some()
     }
 
+    /// Sets the correlation ID of the `DataPack`.
     pub const fn correlate(&mut self, id: Ulid) {
         self.correlation = id;
     }
 }
 
+/// A codec for encoding/decoding `DataPack` instances.
+///
+/// Wraps a `RawDataPackCodec` to handle the low-level byte operations
+/// while providing higher-level `DataPack` serialization/deserialization.
 pub struct DataPackCodec {
     raw: RawDataPackCodec,
 }
 
 impl DataPackCodec {
+    /// Creates a new `DataPackCodec` with a default `RawDataPackCodec`.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -339,6 +416,7 @@ impl Default for DataPackCodec {
 }
 
 impl Decoder for DataPackCodec {
+    /// Decodes a `DataPack` from raw bytes.
     type Error = DataPackCodecError;
     type Item = DataPack;
 
@@ -352,6 +430,7 @@ impl Decoder for DataPackCodec {
 }
 
 impl Encoder<&DataPack> for DataPackCodec {
+    /// Encodes a `DataPack` into raw bytes.
     type Error = DataPackCodecError;
 
     fn encode(&mut self, item: &DataPack, dst: &mut BytesMut) -> Result<(), Self::Error> {
@@ -362,6 +441,7 @@ impl Encoder<&DataPack> for DataPackCodec {
 }
 
 impl Encoder<RawDataPack> for DataPackCodec {
+    /// Encodes a `RawDataPack` directly into the destination buffer.
     type Error = DataPackCodecError;
 
     fn encode(&mut self, item: RawDataPack, dst: &mut BytesMut) -> Result<(), Self::Error> {
@@ -370,12 +450,16 @@ impl Encoder<RawDataPack> for DataPackCodec {
     }
 }
 
+/// Error type for `DataPackCodec` operations.
 #[derive(Debug, Error)]
 pub enum DataPackCodecError {
+    /// Wraps I/O errors during encoding/decoding.
     #[error("IO error in DataPack codec: {0}")]
     IO(#[from] std::io::Error),
+    /// Wraps serialization errors when converting `DataPack` to bytes.
     #[error("DataPack serialization error: {0}")]
     Serialize(#[from] rmp_serde::encode::Error),
+    /// Wraps deserialization errors when converting bytes to `DataPack`.
     #[error("DataPack deserialization error: {0}")]
     Deserialize(#[from] rmp_serde::decode::Error),
 }

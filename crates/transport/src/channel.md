@@ -64,4 +64,4 @@ export enum ChannelType {
 
 kit 和适配器于插件中是无状态的，意味着你不能简单的将整个 `bot` 实例作为参数传递给插件。
 
-channel 只用于事件来源的关联。对于服务及其余需要内部状态关联的情况，参见 [correlation]()。
+channel 只用于事件来源的关联。对于服务及其余需要内部状态关联的情况，参见 [correlation](crate::datapack::DataPack)。

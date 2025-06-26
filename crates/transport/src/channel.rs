@@ -1,3 +1,5 @@
+#![doc = include_str!("./channel.md")]
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
