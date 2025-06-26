@@ -15,6 +15,7 @@ thiserror.workspace = true
 ulid.workspace = true
 serde.workspace = true
 either.workspace = true
+triomphe.workspace = true
 
 [lints]
 workspace = true

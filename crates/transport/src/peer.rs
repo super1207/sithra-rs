@@ -4,10 +4,21 @@ use tokio::{
     pin,
     process::{Child, ChildStdin, ChildStdout},
 };
+use triomphe::Arc;
 
 pub struct Peer {
     process:  Option<Child>,
     incoming: Either<ChildStdout, Stdin>,
+    outgoing: Either<ChildStdin, Stdout>,
+}
+
+pub struct Reader {
+    _process: Option<Arc<Child>>,
+    incoming: Either<ChildStdout, Stdin>,
+}
+
+pub struct Writer {
+    _process: Option<Arc<Child>>,
     outgoing: Either<ChildStdin, Stdout>,
 }
 
@@ -26,6 +37,25 @@ impl Peer {
             incoming: Either::Right(stdin()),
             outgoing: Either::Right(stdout()),
         }
+    }
+
+    pub fn split(self) -> (Reader, Writer) {
+        let Self {
+            incoming,
+            outgoing,
+            process,
+        } = self;
+        let process = process.map(Arc::new);
+        (
+            Reader {
+                _process: process.clone(),
+                incoming,
+            },
+            Writer {
+                _process: process,
+                outgoing,
+            },
+        )
     }
 
     /// Create a new peer from a child process.
@@ -66,6 +96,76 @@ impl TryFrom<Child> for Peer {
 
     fn try_from(value: Child) -> Result<Self, Self::Error> {
         Self::from_child(value)
+    }
+}
+
+impl AsyncRead for Reader {
+    fn poll_read(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        match self.get_mut().incoming {
+            Either::Left(ref mut stdout) => {
+                pin!(stdout);
+                stdout.poll_read(cx, buf)
+            }
+            Either::Right(ref mut stdin) => {
+                pin!(stdin);
+                stdin.poll_read(cx, buf)
+            }
+        }
+    }
+}
+
+impl AsyncWrite for Writer {
+    fn poll_write(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+        buf: &[u8],
+    ) -> std::task::Poll<std::io::Result<usize>> {
+        match self.get_mut().outgoing {
+            Either::Left(ref mut stdin) => {
+                pin!(stdin);
+                stdin.poll_write(cx, buf)
+            }
+            Either::Right(ref mut stdout) => {
+                pin!(stdout);
+                stdout.poll_write(cx, buf)
+            }
+        }
+    }
+
+    fn poll_flush(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        match self.get_mut().outgoing {
+            Either::Left(ref mut stdin) => {
+                pin!(stdin);
+                stdin.poll_flush(cx)
+            }
+            Either::Right(ref mut stdout) => {
+                pin!(stdout);
+                stdout.poll_flush(cx)
+            }
+        }
+    }
+
+    fn poll_shutdown(
+        self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<std::io::Result<()>> {
+        match self.get_mut().outgoing {
+            Either::Left(ref mut stdin) => {
+                pin!(stdin);
+                stdin.poll_shutdown(cx)
+            }
+            Either::Right(ref mut stdout) => {
+                pin!(stdout);
+                stdout.poll_shutdown(cx)
+            }
+        }
     }
 }
 
