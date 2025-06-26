@@ -45,7 +45,7 @@ where
 mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use sithra_transport::datapack::{RequestDataPack, ResponseDataPack};
+    use sithra_transport::datapack::RequestDataPack;
     use tokio::sync::Mutex;
     use tower::Service;
     use triomphe::Arc;
@@ -66,10 +66,11 @@ mod tests {
         RequestDataPack::default().path(path)
     }
 
-    async fn count2(State(state): State<AppState>) -> ResponseDataPack {
+    async fn count2(State(state): State<AppState>) -> Result<Payload<()>, String> {
         state.counter.fetch_add(2, Ordering::Relaxed);
-        ResponseDataPack::default().payload_value("")
+        Ok(Payload(()))
     }
+
     async fn on_message(Payload(_message): Payload<String>, State(state): State<AppState>) {
         state.counter.fetch_add(1, Ordering::Relaxed);
     }

@@ -6,8 +6,6 @@ use ulid::Ulid;
 
 use crate::{channel::Channel, util::get_chunk};
 
-const UNASSIGNED_ID: Ulid = Ulid::from_bytes([0; 16]);
-
 pub struct RawDataPack {
     data_len: u32,
     data:     Bytes,
@@ -86,19 +84,22 @@ impl Decoder for RawDataPackCodec {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DataPack {
-    #[serde(flatten)]
-    pub header:      Header,
+    pub path:        Option<String>,
     pub correlation: Ulid,
     pub channel:     Option<Channel>,
     #[serde(flatten)]
     pub result:      DataResult,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(untagged)]
-pub enum Header {
-    Request { path: String },
-    Response,
+impl Default for DataPack {
+    fn default() -> Self {
+        Self {
+            path:        None,
+            correlation: Ulid::new(),
+            channel:     None,
+            result:      DataResult::Payload(rmpv::Value::Nil),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -152,14 +153,6 @@ impl RequestDataPack {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct ResponseDataPack {
-    pub correlation: Ulid,
-    pub channel:     Option<Channel>,
-    #[serde(flatten)]
-    pub result:      DataResult,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
 pub enum DataResult {
     #[serde(rename = "payload")]
     Payload(rmpv::Value),
@@ -176,57 +169,117 @@ impl From<DataResult> for Result<rmpv::Value, String> {
     }
 }
 
-impl Default for ResponseDataPack {
-    fn default() -> Self {
-        Self {
-            correlation: UNASSIGNED_ID,
-            channel:     None,
-            result:      DataResult::Payload(rmpv::Value::Nil),
+impl<P, E> From<Result<P, E>> for DataResult
+where
+    P: Into<rmpv::Value>,
+    E: ToString,
+{
+    fn from(value: Result<P, E>) -> Self {
+        match value {
+            Ok(payload) => Self::Payload(payload.into()),
+            Err(error) => Self::Error(error.to_string()),
         }
     }
 }
 
-impl ResponseDataPack {
-    pub const fn correlate(&mut self, correlation: Ulid) {
-        self.correlation = correlation;
+pub struct DataPackBuilder {
+    pub path:        Option<String>,
+    pub correlation: Option<Ulid>,
+    pub channel:     Option<Channel>,
+    pub result:      Option<DataResult>,
+}
+
+impl Default for DataPackBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DataPackBuilder {
+    #[must_use]
+    pub const fn new() -> Self {
+        Self {
+            path:        None,
+            correlation: None,
+            channel:     None,
+            result:      None,
+        }
     }
 
     #[must_use]
-    pub fn payload_value(mut self, payload: impl Into<rmpv::Value>) -> Self {
-        self.result = DataResult::Payload(payload.into());
+    pub fn path(mut self, path: &impl ToString) -> Self {
+        self.path = Some(path.to_string());
         self
     }
 
-    /// # Errors
-    /// Returns an error if the payload cannot be serialized.
-    pub fn payload<S>(mut self, payload: S) -> Result<Self, rmpv::ext::Error>
-    where
-        S: Serialize,
-    {
-        let value = rmpv::ext::to_value(&payload)?;
-        self.result = DataResult::Payload(value);
-        Ok(self)
+    #[must_use]
+    pub fn correlate(mut self, id: impl Into<Ulid>) -> Self {
+        self.correlation = Some(id.into());
+        self
     }
 
     #[must_use]
-    pub fn channel(mut self, channel: Channel) -> Self {
-        self.channel = Some(channel);
+    pub fn channel(mut self, id: impl Into<Channel>) -> Self {
+        self.channel = Some(id.into());
+        self
+    }
+
+    #[must_use]
+    pub fn result(mut self, result: impl Into<DataResult>) -> Self {
+        self.result = Some(result.into());
+        self
+    }
+
+    #[must_use]
+    pub fn build(self) -> DataPack {
+        let Self {
+            path,
+            correlation,
+            channel,
+            result,
+        } = self;
+
+        let correlation = correlation.unwrap_or_else(Ulid::new);
+
+        let result = result.unwrap_or(DataResult::Payload(rmpv::Value::Nil));
+
+        DataPack {
+            path,
+            correlation,
+            channel,
+            result,
+        }
+    }
+
+    #[must_use]
+    pub fn payload(mut self, payload: impl Into<rmpv::Value>) -> Self {
+        self.result = Some(DataResult::Payload(payload.into()));
         self
     }
 
     #[must_use]
     pub fn error(mut self, error: &impl ToString) -> Self {
-        self.result = DataResult::Error(error.to_string());
+        self.result = Some(DataResult::Error(error.to_string()));
         self
+    }
+
+    #[must_use]
+    pub fn build_with_payload(self, payload: impl Into<rmpv::Value>) -> DataPack {
+        self.payload(payload).build()
+    }
+
+    #[must_use]
+    pub fn build_with_error(self, error: &impl ToString) -> DataPack {
+        self.error(error).build()
     }
 }
 
-pub enum RequestOrResponse {
-    Request(RequestDataPack),
-    Response(ResponseDataPack),
-}
-
 impl DataPack {
+    #[must_use]
+    pub const fn builder() -> DataPackBuilder {
+        DataPackBuilder::new()
+    }
+
     /// Deserialize a `DataPack` from a byte slice.
     ///
     /// # Errors
@@ -258,35 +311,11 @@ impl DataPack {
 
     #[must_use]
     pub const fn is_request(&self) -> bool {
-        matches!(self.header, Header::Request { .. })
+        self.path.is_some()
     }
 
-    #[must_use]
-    pub const fn is_response(&self) -> bool {
-        matches!(self.header, Header::Response)
-    }
-
-    #[must_use]
-    pub fn into_req_or_rep(self) -> RequestOrResponse {
-        let Self {
-            correlation,
-            header,
-            channel,
-            result,
-        } = self;
-        match header {
-            Header::Request { path } => RequestOrResponse::Request(RequestDataPack {
-                path,
-                correlation,
-                channel,
-                payload: Result::from(result).unwrap_or_else(rmpv::Value::from),
-            }),
-            Header::Response => RequestOrResponse::Response(ResponseDataPack {
-                correlation,
-                channel,
-                result,
-            }),
-        }
+    pub const fn correlate(&mut self, id: Ulid) {
+        self.correlation = id;
     }
 }
 

@@ -7,14 +7,14 @@ use std::{
 use futures_util::ready;
 use pin_project::pin_project;
 use serde::Serialize;
-use sithra_transport::datapack::ResponseDataPack;
+use sithra_transport::datapack::DataPack;
 use tower::Service;
 use ulid::Ulid;
 
 use crate::{extract::payload::Payload, request::Request};
 
 pub struct Response {
-    pub data: Option<ResponseDataPack>,
+    pub data: Option<DataPack>,
 }
 
 pub struct Error<E: ToString>(E);
@@ -30,7 +30,7 @@ where
 
 impl Response {
     #[must_use]
-    pub const fn new(data: ResponseDataPack) -> Self {
+    pub const fn new(data: DataPack) -> Self {
         Self { data: Some(data) }
     }
 
@@ -52,7 +52,7 @@ impl Response {
 
     pub fn error(error: &impl ToString) -> Self {
         Self {
-            data: Some(ResponseDataPack::default().error(error)),
+            data: Some(DataPack::builder().build_with_error(error)),
         }
     }
 }
@@ -81,7 +81,7 @@ impl IntoResponse for Infallible {
     }
 }
 
-impl IntoResponse for ResponseDataPack {
+impl IntoResponse for DataPack {
     fn into_response(self) -> Response {
         Response { data: Some(self) }
     }
@@ -111,7 +111,12 @@ where
 
 impl<V: Serialize> IntoResponse for Payload<V> {
     fn into_response(self) -> Response {
-        ResponseDataPack::default().payload(self.into_inner()).into_response()
+        let Self(payload) = self;
+        let value = rmpv::ext::to_value(payload);
+        let Ok(value) = value else {
+            return Response::error(&"Failed to serialize payload");
+        };
+        DataPack::builder().build_with_payload(value).into_response()
     }
 }
 

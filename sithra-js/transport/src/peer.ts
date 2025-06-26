@@ -1,4 +1,4 @@
-import { DataPack, RequestDataPack, ResponseDataPack } from ".";
+import { DataPack, RequestDataPack } from ".";
 import { IDataPackCodec } from "./codec";
 import { asChunks, initStdio } from "./util";
 
@@ -30,7 +30,7 @@ export class Peer {
       }
     })
   }
-  async send(data: ResponseDataPack<unknown>) {
+  async send(data: DataPack<unknown>) {
     const buffer = this.codec.encode(data);
     const buffers = asChunks(buffer);
     for (const chunk of buffers) {

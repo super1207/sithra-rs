@@ -15,7 +15,7 @@ export enum ChannelType {
   Private = "private",
 }
 
-export interface DataPack<T, R extends "response" | "request"> {
+export interface IDataPack<T, R extends "response" | "request"> {
   path: R extends "response" ? never : string,
   correlation: string,
   channel?: Channel
@@ -23,5 +23,6 @@ export interface DataPack<T, R extends "response" | "request"> {
   error?: R extends "response" ? string | undefined : never,
 }
 
-export type RequestDataPack<T> = DataPack<T, "request">;
-export type ResponseDataPack<T> = DataPack<T, "response">;
+export type DataPack<T> = IDataPack<T, "response" | "request">;
+
+export type RequestDataPack<T> = IDataPack<T, "request">;
