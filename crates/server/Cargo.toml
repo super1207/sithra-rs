@@ -23,6 +23,7 @@ triomphe.workspace = true
 # Workspace dependencies
 
 sithra-transport.workspace = true
+parking_lot = "0.12.4"
 
 [lints]
 workspace = true

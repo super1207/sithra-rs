@@ -532,6 +532,7 @@ dependencies = [
  "either",
  "futures-util",
  "matchit",
+ "parking_lot",
  "pin-project",
  "rmp-serde",
  "rmpv",

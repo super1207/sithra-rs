@@ -7,6 +7,12 @@ pub struct Request {
     pub data: Arc<RequestDataPack>,
 }
 
+impl From<RequestDataPack> for Request {
+    fn from(value: RequestDataPack) -> Self {
+        Self::new(value)
+    }
+}
+
 impl Request {
     #[must_use]
     pub fn correlation(&self) -> Ulid {

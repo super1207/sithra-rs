@@ -69,7 +69,7 @@ impl Peer {
     ///
     /// # Returns
     /// A tuple containing the `Reader` and `Writer` instances.
-    pub fn split(self) -> (Reader, Writer) {
+    pub fn split(self) -> (Writer, Reader) {
         let Self {
             incoming,
             outgoing,
@@ -77,13 +77,13 @@ impl Peer {
         } = self;
         let process = process.map(Arc::new);
         (
-            Reader {
-                _process: process.clone(),
-                incoming,
-            },
             Writer {
-                _process: process,
+                _process: process.clone(),
                 outgoing,
+            },
+            Reader {
+                _process: process,
+                incoming,
             },
         )
     }

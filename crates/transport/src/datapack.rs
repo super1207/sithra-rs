@@ -1,4 +1,5 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use either::Either;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio_util::codec::{Decoder, Encoder};
@@ -122,6 +123,23 @@ impl Default for DataPack {
             correlation: Ulid::new(),
             channel:     None,
             result:      DataResult::Payload(rmpv::Value::Nil),
+        }
+    }
+}
+
+impl From<RequestDataPack> for DataPack {
+    fn from(value: RequestDataPack) -> Self {
+        let RequestDataPack {
+            path,
+            correlation,
+            channel,
+            payload,
+        } = value;
+        Self {
+            path: Some(path),
+            correlation,
+            channel,
+            result: DataResult::Payload(payload),
         }
     }
 }
@@ -338,6 +356,16 @@ impl DataPack {
         DataPackBuilder::new()
     }
 
+    /// # Errors
+    /// Returns an error if deserialization fails.
+    pub fn payload<T: for<'de> Deserialize<'de>>(&self) -> Result<T, String> {
+        let payload = match &self.result {
+            DataResult::Error(err) => return Err(err.clone()),
+            DataResult::Payload(payload) => payload.clone(),
+        };
+        rmpv::ext::from_value(payload).map_err(|err| format!("{err}"))
+    }
+
     /// Deserialize a `DataPack` from a byte slice.
     ///
     /// # Errors
@@ -385,9 +413,35 @@ impl DataPack {
         self.path.is_some()
     }
 
+    #[must_use]
+    pub fn either_request(self) -> Either<Self, RequestDataPack> {
+        if self.is_request() {
+            Either::Right(self.into_request())
+        } else {
+            Either::Left(self)
+        }
+    }
+
     /// Sets the correlation ID of the `DataPack`.
     pub const fn correlate(&mut self, id: Ulid) {
         self.correlation = id;
+    }
+
+    #[must_use]
+    pub fn into_request(self) -> RequestDataPack {
+        let Self {
+            path,
+            correlation,
+            channel,
+            result,
+        } = self;
+        let payload: Result<_, _> = result.into();
+        RequestDataPack {
+            path: path.unwrap_or_default(),
+            correlation,
+            channel,
+            payload: payload.unwrap_or(rmpv::Value::Nil),
+        }
     }
 }
 
@@ -434,6 +488,17 @@ impl Encoder<&DataPack> for DataPackCodec {
     type Error = DataPackCodecError;
 
     fn encode(&mut self, item: &DataPack, dst: &mut BytesMut) -> Result<(), Self::Error> {
+        let raw_data = item.serialize_to_raw()?;
+        self.raw.encode(raw_data, dst)?;
+        Ok(())
+    }
+}
+
+impl Encoder<DataPack> for DataPackCodec {
+    /// Encodes a `DataPack` into raw bytes.
+    type Error = DataPackCodecError;
+
+    fn encode(&mut self, item: DataPack, dst: &mut BytesMut) -> Result<(), Self::Error> {
         let raw_data = item.serialize_to_raw()?;
         self.raw.encode(raw_data, dst)?;
         Ok(())

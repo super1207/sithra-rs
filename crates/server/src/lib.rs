@@ -9,7 +9,8 @@ pub mod multi;
 pub mod request;
 pub mod response;
 pub mod routing;
-pub mod service;
+pub mod server;
+pub mod shared;
 
 pub(crate) fn try_downcast<T, K>(k: K) -> Result<T, K>
 where
@@ -81,7 +82,10 @@ mod tests {
         let a = Arc::new(Mutex::new(String::new()));
         let a_ = a.clone();
         let mut router: Router = Router::new()
-            .route("/message", multi([on(async || {}), on(on_message)]))
+            .route(
+                "/message",
+                multi([on(async || Payload("Hello World.")), on(on_message)]),
+            )
             .route(
                 "/count",
                 on(async move |State(state): State<AppState>| {
