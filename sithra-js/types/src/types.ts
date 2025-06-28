@@ -3,8 +3,14 @@
 */
 
 
+export enum SegmentType {
+	Text = "text",
+	Image = "image",
+	Unknown = "unknown",
+}
+
 export interface Segment {
-	type: string;
+	type: SegmentType;
 	content: string;
 }
 

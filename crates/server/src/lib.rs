@@ -20,6 +20,7 @@ pub mod __private {
     pub use serde::Deserialize;
 }
 
+#[allow(unused_imports)]
 #[cfg(feature = "macros")]
 pub use sithra_server_macros::*;
 

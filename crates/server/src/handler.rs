@@ -16,7 +16,7 @@ use crate::{
     response::{IntoResponse, Response},
 };
 
-pub trait Handler<T, S>: Clone + Send + Sync + Sized + 'static {
+pub trait Handler<T, S = ()>: Clone + Send + Sync + Sized + 'static {
     /// The type of future calling this handler returns.
     type Future: Future<Output = Response> + Send + 'static;
 

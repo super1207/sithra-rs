@@ -6,6 +6,7 @@ use std::{
 
 use futures_util::ready;
 use pin_project::pin_project;
+use sithra_transport::channel::Channel;
 use tower::{
     Layer, Service, ServiceExt,
     util::{BoxCloneSyncService, MapErrLayer, Oneshot},
@@ -38,14 +39,16 @@ impl<E> Route<E> {
 
     pub(crate) fn oneshot_inner(&self, req: Request) -> RouteFuture<E> {
         let correlation = req.correlation();
-        RouteFuture::new(self.0.clone().oneshot(req), correlation)
+        let channel = req.channel();
+        RouteFuture::new(self.0.clone().oneshot(req), correlation, channel)
     }
 
     /// Variant of [`Route::oneshot_inner`] that takes ownership of the route to
     /// avoid cloning.
     pub(crate) fn oneshot_inner_owned(self, req: Request) -> RouteFuture<E> {
         let correlation = req.correlation();
-        RouteFuture::new(self.0.oneshot(req), correlation)
+        let channel = req.channel();
+        RouteFuture::new(self.0.oneshot(req), correlation, channel)
     }
 
     pub(crate) fn layer<L, NewError>(self, layer: L) -> Route<NewError>
@@ -90,14 +93,20 @@ pub struct RouteFutureOneshot<E> {
     #[pin]
     inner:       Oneshot<BoxCloneSyncService<Request, Response, E>, Request>,
     correlation: Ulid,
+    channel:     Option<Channel>,
 }
 
 impl<E> RouteFuture<E> {
     const fn new(
         inner: Oneshot<BoxCloneSyncService<Request, Response, E>, Request>,
         correlation: Ulid,
+        channel_opt: Option<Channel>,
     ) -> Self {
-        Self::Oneshot(RouteFutureOneshot { inner, correlation })
+        Self::Oneshot(RouteFutureOneshot {
+            inner,
+            correlation,
+            channel: channel_opt,
+        })
     }
 
     #[must_use]
@@ -116,6 +125,9 @@ impl<E> Future for RouteFuture<E> {
                 let this = route_future_oneshot.project();
                 let mut res = ready!(this.inner.poll(cx))?;
                 res.correlate(*this.correlation);
+                if let Some(channel) = this.channel.take() {
+                    res.channel(channel);
+                }
                 Poll::Ready(Ok(res))
             }
             RouteFutureProj::Ready(response) => {

@@ -7,7 +7,10 @@ use std::{
 use futures_util::ready;
 use pin_project::pin_project;
 use serde::Serialize;
-use sithra_transport::datapack::DataPack;
+use sithra_transport::{
+    channel::Channel,
+    datapack::{DataPack, RequestDataPack},
+};
 use tower::Service;
 use ulid::Ulid;
 
@@ -30,8 +33,10 @@ where
 
 impl Response {
     #[must_use]
-    pub const fn new(data: DataPack) -> Self {
-        Self { data: Some(data) }
+    pub fn new(data: impl Into<DataPack>) -> Self {
+        Self {
+            data: Some(data.into()),
+        }
     }
 
     #[must_use]
@@ -47,6 +52,12 @@ impl Response {
     pub const fn correlate(&mut self, id: Ulid) {
         if let Some(data) = self.data.as_mut() {
             data.correlate(id);
+        }
+    }
+
+    pub fn channel(&mut self, channel: Channel) {
+        if let Some(data) = self.data.as_mut() {
+            data.channel = Some(channel);
         }
     }
 
@@ -66,6 +77,12 @@ pub trait IntoResponse {
 impl IntoResponse for Response {
     fn into_response(self) -> Response {
         self
+    }
+}
+
+impl IntoResponse for RequestDataPack {
+    fn into_response(self) -> Response {
+        Response::new(self)
     }
 }
 

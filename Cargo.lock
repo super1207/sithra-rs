@@ -687,6 +687,7 @@ dependencies = [
  "sithra-server",
  "sithra-transport",
  "smallvec",
+ "tokio",
  "typeshare",
 ]
 
