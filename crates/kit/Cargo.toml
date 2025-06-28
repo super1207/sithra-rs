@@ -22,7 +22,6 @@ triomphe.workspace = true
 
 # Workspace dependencies
 
-sithra-transport.workspace = true
 sithra-server.workspace = true
 sithra-types.workspace = true
 

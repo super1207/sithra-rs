@@ -19,11 +19,16 @@ smallvec.workspace = true
 tower.workspace = true
 matchit.workspace = true
 triomphe.workspace = true
+parking_lot = "0.12.4"
 
 # Workspace dependencies
 
 sithra-transport.workspace = true
-parking_lot = "0.12.4"
+sithra-server-macros = { workspace = true, optional = true }
 
 [lints]
 workspace = true
+
+[features]
+default = ["macros"]
+macros = ["sithra-server-macros"]

@@ -11,6 +11,17 @@ pub mod response;
 pub mod routing;
 pub mod server;
 pub mod shared;
+pub use sithra_transport as transport;
+pub mod sync {
+    pub use triomphe::*;
+}
+#[doc(hidden)]
+pub mod __private {
+    pub use serde::Deserialize;
+}
+
+#[cfg(feature = "macros")]
+pub use sithra_server_macros::*;
 
 pub(crate) fn try_downcast<T, K>(k: K) -> Result<T, K>
 where

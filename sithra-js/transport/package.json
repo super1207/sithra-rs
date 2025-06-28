@@ -5,9 +5,11 @@
   "license": "Unlicense",
   "author": "",
   "type": "module",
-  "main": "dist/test.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist/**/*"
-  ]
+  ],
+  "dependencies": {
+    "sithra-types": "file:../types"
+  }
 }

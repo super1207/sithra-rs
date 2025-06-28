@@ -1,4 +1,4 @@
-import type { DataPack, RequestDataPack, ResponseDataPack } from ".."
+import type { DataPack, RequestDataPack } from ".."
 import { encode as msgpackEncode, decode as msgpackDecode } from "@msgpack/msgpack";
 
 export function encode(data: unknown): Uint8Array<ArrayBuffer> {
@@ -38,9 +38,9 @@ export interface Codec<D, E> {
   encode(data: E): Buffer;
 }
 
-export type IDataPackCodec = Codec<RequestDataPack<unknown>, ResponseDataPack<unknown>>;
+export type IDataPackCodec = Codec<RequestDataPack<unknown>, DataPack<unknown>>;
 
-export class DataPackCodec implements Codec<RequestDataPack<unknown>, ResponseDataPack<unknown>> {
+export class DataPackCodec implements Codec<RequestDataPack<unknown>, DataPack<unknown>> {
   deBuffer: Buffer
   enBuffer: Buffer
   dataLength: number | null
@@ -72,7 +72,7 @@ export class DataPackCodec implements Codec<RequestDataPack<unknown>, ResponseDa
     return data as RequestDataPack<unknown>;
   }
 
-  encode(data: ResponseDataPack<unknown>): Buffer {
+  encode(data: DataPack<unknown>): Buffer {
     return Buffer.from(encode(data))
   }
 }

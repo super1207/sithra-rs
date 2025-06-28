@@ -1,4 +1,5 @@
-use sithra_transport::datapack::RequestDataPack;
+use serde::Deserialize;
+use sithra_transport::{channel::Channel, datapack::RequestDataPack};
 use triomphe::Arc;
 use ulid::Ulid;
 
@@ -10,6 +11,12 @@ pub struct Request {
 impl From<RequestDataPack> for Request {
     fn from(value: RequestDataPack) -> Self {
         Self::new(value)
+    }
+}
+
+impl From<Arc<RequestDataPack>> for Request {
+    fn from(value: Arc<RequestDataPack>) -> Self {
+        Self { data: value }
     }
 }
 
@@ -34,5 +41,16 @@ impl Request {
         Self {
             data: Arc::new(data),
         }
+    }
+
+    /// # Errors
+    /// Returns an error if the payload cannot be deserialized.
+    pub fn payload<T: for<'de> Deserialize<'de>>(&self) -> Result<T, rmpv::ext::Error> {
+        rmpv::ext::from_value(self.data.payload.clone())
+    }
+
+    #[must_use]
+    pub fn channel(&self) -> Option<Channel> {
+        self.data.channel.clone()
     }
 }

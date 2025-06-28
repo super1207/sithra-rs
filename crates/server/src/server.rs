@@ -17,7 +17,10 @@ use sithra_transport::{
 };
 use thiserror::Error;
 use tokio::{
-    sync::mpsc::{UnboundedReceiver, UnboundedSender, error::SendError},
+    sync::{
+        mpsc::{UnboundedReceiver, UnboundedSender, error::SendError},
+        oneshot,
+    },
     task::JoinSet,
 };
 use tokio_util::codec::{FramedRead, FramedWrite};
@@ -273,12 +276,30 @@ impl Client {
     pub fn post(
         &self,
         datapack: impl Into<RequestDataPack>,
-    ) -> Result<ReceiverGuard<Ulid, DataPack>, DataPack> {
+    ) -> Result<ReceiverGuard<Ulid, DataPack>, PostError> {
         let datapack = datapack.into();
         let key = datapack.correlation();
         let guard = self.shared_oneshot_map.register(key).expect("Ulid Conflict");
-        self.writer_tx.send(datapack.into()).map_err(|err| err.0)?;
+        self.writer_tx
+            .send(datapack.into())
+            .map_err(|err| PostError::ChannelClosed(err.0))?;
         Ok(guard)
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum PostError {
+    #[error("Channel closed")]
+    ChannelClosed(DataPack),
+    #[error("Recv error: {0}")]
+    RecvError(#[from] oneshot::error::RecvError),
+    #[error("Request error: {0}")]
+    RequestError(String),
+}
+
+impl From<String> for PostError {
+    fn from(value: String) -> Self {
+        Self::RequestError(value)
     }
 }
 

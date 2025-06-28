@@ -19,9 +19,10 @@ ulid = { version = "1", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 either = { version = "1" }
 tower = { version = "0.5", features = ["full"] }
-smallvec = { version = "1", features = ["const_generics"] }
+smallvec = { version = "1", features = ["const_generics", "serde"] }
 matchit = { version = "0.8" }
 triomphe = { version = "0.1" }
+typeshare = { version = "1" }
 
 # Workspace
 
@@ -29,6 +30,7 @@ sithra-transport = { path = "crates/transport" }
 sithra-types = { path = "crates/types" }
 sithra-server = { path = "crates/server" }
 sithra-kit = { path = "crates/kit" }
+sithra-server-macros = { path = "crates/server-macros" }
 
 [workspace.lints.clippy]
 nursery = { level = "warn", priority = -1 }

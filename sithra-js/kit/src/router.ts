@@ -1,6 +1,5 @@
-
 import { parse } from "regexparam"
-import { RequestDataPack, ResponseDataPack } from "sithra-transport";
+import { RequestDataPack } from "sithra-transport";
 import { HandlerFunction, HandlerRequest, HandlerResponse, RouteType } from "./types";
 
 export type Route = {

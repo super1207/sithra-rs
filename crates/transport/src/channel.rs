@@ -1,7 +1,9 @@
 #![doc = include_str!("./channel.md")]
 
 use serde::{Deserialize, Serialize};
+use typeshare::typeshare;
 
+#[typeshare]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 /// Represents a communication channel with a unique ID, type, name, and
 /// optional parent ID.
@@ -115,6 +117,7 @@ impl Channel {
 }
 
 /// Represents the type of a communication channel.
+#[typeshare]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ChannelType {

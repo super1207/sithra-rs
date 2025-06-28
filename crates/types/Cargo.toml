@@ -5,11 +5,13 @@ edition.workspace = true
 
 [dependencies]
 serde.workspace = true
+typeshare.workspace = true
 
 # Workspace dependencies
 
 sithra-server.workspace = true
 sithra-transport.workspace = true
+smallvec.workspace = true
 
 [lints]
 workspace = true

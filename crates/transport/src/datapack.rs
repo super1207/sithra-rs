@@ -182,6 +182,14 @@ impl RequestDataPack {
     }
 
     #[must_use]
+    pub fn channel_opt(mut self, channel: Option<Channel>) -> Self {
+        if let Some(channel) = channel {
+            self.channel = Some(channel);
+        }
+        self
+    }
+
+    #[must_use]
     pub fn payload_value(mut self, payload: impl Into<rmpv::Value>) -> Self {
         self.payload = payload.into();
         self

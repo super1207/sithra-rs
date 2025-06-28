@@ -8,7 +8,8 @@
   "type": "module",
   "workspaces": [
     "transport",
-    "kit"
+    "kit",
+    "types"
   ],
   "scripts": {
     "build": "rollup -c rollup.config.ts"
