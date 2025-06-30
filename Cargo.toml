@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/*"]
+members = ["crates/*", "adapters/*"]
 default-members = ["crates/sithra"]
 
 [workspace.package]
@@ -23,6 +23,8 @@ smallvec = { version = "1", features = ["const_generics", "serde"] }
 matchit = { version = "0.8" }
 triomphe = { version = "0.1" }
 typeshare = { version = "1" }
+log = { version = "0.4", features = ["serde"] }
+once_cell = { version = "1.21.3" }
 
 # Workspace
 
@@ -38,6 +40,8 @@ pedantic = { level = "warn", priority = -1 }
 
 type_complexity = "allow"
 option_if_let_else = "allow"
+
+collapsible_if = "allow"
 
 await_holding_lock = "warn"
 dbg_macro = "warn"

@@ -40,7 +40,8 @@ impl<E> Route<E> {
     pub(crate) fn oneshot_inner(&self, req: Request) -> RouteFuture<E> {
         let correlation = req.correlation();
         let channel = req.channel();
-        RouteFuture::new(self.0.clone().oneshot(req), correlation, channel)
+        let bot_id = req.bot_id();
+        RouteFuture::new(self.0.clone().oneshot(req), correlation, channel, bot_id)
     }
 
     /// Variant of [`Route::oneshot_inner`] that takes ownership of the route to
@@ -48,7 +49,8 @@ impl<E> Route<E> {
     pub(crate) fn oneshot_inner_owned(self, req: Request) -> RouteFuture<E> {
         let correlation = req.correlation();
         let channel = req.channel();
-        RouteFuture::new(self.0.oneshot(req), correlation, channel)
+        let bot_id = req.bot_id();
+        RouteFuture::new(self.0.oneshot(req), correlation, channel, bot_id)
     }
 
     pub(crate) fn layer<L, NewError>(self, layer: L) -> Route<NewError>
@@ -83,7 +85,7 @@ impl<E> Service<Request> for Route<E> {
 }
 
 #[pin_project(project = RouteFutureProj)]
-pub enum RouteFuture<E> {
+pub enum RouteFuture<E = Infallible> {
     Oneshot(#[pin] RouteFutureOneshot<E>),
     Ready(Option<Response>),
 }
@@ -94,6 +96,7 @@ pub struct RouteFutureOneshot<E> {
     inner:       Oneshot<BoxCloneSyncService<Request, Response, E>, Request>,
     correlation: Ulid,
     channel:     Option<Channel>,
+    bot_id:      Option<String>,
 }
 
 impl<E> RouteFuture<E> {
@@ -101,11 +104,13 @@ impl<E> RouteFuture<E> {
         inner: Oneshot<BoxCloneSyncService<Request, Response, E>, Request>,
         correlation: Ulid,
         channel_opt: Option<Channel>,
+        bot_id_opt: Option<String>,
     ) -> Self {
         Self::Oneshot(RouteFutureOneshot {
             inner,
             correlation,
             channel: channel_opt,
+            bot_id: bot_id_opt,
         })
     }
 
@@ -126,7 +131,10 @@ impl<E> Future for RouteFuture<E> {
                 let mut res = ready!(this.inner.poll(cx))?;
                 res.correlate(*this.correlation);
                 if let Some(channel) = this.channel.take() {
-                    res.channel(channel);
+                    res.set_channel(channel);
+                }
+                if let Some(bot_id) = this.bot_id.take() {
+                    res.set_bot_id(&bot_id);
                 }
                 Poll::Ready(Ok(res))
             }

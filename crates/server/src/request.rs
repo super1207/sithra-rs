@@ -43,6 +43,16 @@ impl Request {
         }
     }
 
+    #[must_use]
+    pub fn bot_id(&self) -> Option<String> {
+        self.data.bot_id.clone()
+    }
+
+    #[must_use]
+    pub fn bot_id_ref(&self) -> Option<&str> {
+        self.data.bot_id.as_deref()
+    }
+
     /// # Errors
     /// Returns an error if the payload cannot be deserialized.
     pub fn payload<T: for<'de> Deserialize<'de>>(&self) -> Result<T, rmpv::ext::Error> {

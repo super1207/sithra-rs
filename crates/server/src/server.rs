@@ -65,6 +65,10 @@ pub struct Client {
     shared_oneshot_map: SharedOneshotMap<Ulid, DataPack>,
 }
 
+pub struct ClientSink {
+    writer_tx: UnboundedSender<DataPack>,
+}
+
 impl Clone for Client {
     fn clone(&self) -> Self {
         Self {
@@ -284,6 +288,67 @@ impl Client {
             .send(datapack.into())
             .map_err(|err| PostError::ChannelClosed(err.0))?;
         Ok(guard)
+    }
+
+    /// Sends a request to the server without waiting for a response.
+    ///
+    /// # Arguments
+    ///
+    /// * `datapack` - The request data to send. This can be any type that
+    ///   converts into a `RequestDataPack`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Err(DataPack)` if the connection to the server is closed
+    /// before the request can be sent. The `DataPack` inside the `Err` is
+    /// the original request that failed to be sent.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if there is a `Ulid` conflict for the request's
+    /// correlation ID. This is extremely unlikely to happen in practice.
+    #[allow(clippy::result_large_err)]
+    pub fn send(&self, datapack: impl Into<RequestDataPack>) -> Result<(), PostError> {
+        let datapack = datapack.into();
+        self.writer_tx
+            .send(datapack.into())
+            .map_err(|err| PostError::ChannelClosed(err.0))?;
+        Ok(())
+    }
+
+    #[must_use]
+    pub fn sink(&self) -> ClientSink {
+        ClientSink {
+            writer_tx: self.writer_tx.clone(),
+        }
+    }
+}
+
+impl ClientSink {
+    /// Sends a request to the server without waiting for a response.
+    ///
+    /// # Arguments
+    ///
+    /// * `datapack` - The request data to send. This can be any type that
+    ///   converts into a `RequestDataPack`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Err(DataPack)` if the connection to the server is closed
+    /// before the request can be sent. The `DataPack` inside the `Err` is
+    /// the original request that failed to be sent.
+    ///
+    /// # Panics
+    ///
+    /// This method panics if there is a `Ulid` conflict for the request's
+    /// correlation ID. This is extremely unlikely to happen in practice.
+    #[allow(clippy::result_large_err)]
+    pub fn send(&self, datapack: impl Into<RequestDataPack>) -> Result<(), PostError> {
+        let datapack = datapack.into();
+        self.writer_tx
+            .send(datapack.into())
+            .map_err(|err| PostError::ChannelClosed(err.0))?;
+        Ok(())
     }
 }
 

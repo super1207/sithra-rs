@@ -55,7 +55,13 @@ impl Response {
         }
     }
 
-    pub fn channel(&mut self, channel: Channel) {
+    pub fn set_bot_id(&mut self, bot_id: &impl ToString) {
+        if let Some(data) = self.data.as_mut() {
+            data.bot_id = Some(bot_id.to_string());
+        }
+    }
+
+    pub fn set_channel(&mut self, channel: Channel) {
         if let Some(data) = self.data.as_mut() {
             data.channel = Some(channel);
         }

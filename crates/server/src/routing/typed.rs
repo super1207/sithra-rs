@@ -1,12 +1,12 @@
 #[macro_export]
 macro_rules! typed {
-    ($route:expr => impl $typed:ty; $($T:ty),*)=>{
+    ($route:expr => impl $typed:ty $([$($N:ty),*])?; $($T:ty),*)=>{
         $(impl AllowedPayload for $crate::extract::payload::Payload<$T> {})*
         $(impl<Sta> AllowedPayload for $crate::extract::context::Context<$T, Sta> {})*
         pub trait AllowedPayload {}
         typed!(@private A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z);
         #[allow(dead_code)]
-        impl $typed {
+        impl$(<$($N),*>)? $typed $(<$($N),*>)? {
             #[doc = "Create a new endpoint for the given route and handler.\n\n"]
             #[doc = concat!("Path: `", $route, "`\n\n")]
             #[doc = "Allowed payload:\n\n"]
@@ -95,7 +95,9 @@ macro_rules! router {
         ($router)
         $(.route(
             <$typed>::path(),
-            $crate::multi([$(<$typed>::__on$(::<_, _, $st>)?($handler),)*])
+            $crate::multi(
+                [$(<$typed>::__on$(::<_, _, $st>)?($handler),)*]
+            )
         ))*
     }
 }

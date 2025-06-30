@@ -109,6 +109,7 @@ impl Decoder for RawDataPackCodec {
 /// and a `result` field that can be either a payload or an error.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DataPack {
+    pub bot_id:      Option<String>,
     pub path:        Option<String>,
     pub correlation: Ulid,
     pub channel:     Option<Channel>,
@@ -119,6 +120,7 @@ pub struct DataPack {
 impl Default for DataPack {
     fn default() -> Self {
         Self {
+            bot_id:      None,
             path:        None,
             correlation: Ulid::new(),
             channel:     None,
@@ -130,12 +132,14 @@ impl Default for DataPack {
 impl From<RequestDataPack> for DataPack {
     fn from(value: RequestDataPack) -> Self {
         let RequestDataPack {
+            bot_id,
             path,
             correlation,
             channel,
             payload,
         } = value;
         Self {
+            bot_id,
             path: Some(path),
             correlation,
             channel,
@@ -150,6 +154,7 @@ impl From<RequestDataPack> for DataPack {
 /// metadata and a correlation ID for tracking.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct RequestDataPack {
+    pub bot_id:  Option<String>,
     pub path:    String,
     correlation: Ulid,
     pub channel: Option<Channel>,
@@ -160,6 +165,7 @@ impl Default for RequestDataPack {
     /// Creates a default `RequestDataPack` with empty fields.
     fn default() -> Self {
         Self {
+            bot_id:      None,
             path:        String::new(),
             correlation: Ulid::new(),
             channel:     None,
@@ -169,6 +175,12 @@ impl Default for RequestDataPack {
 }
 
 impl RequestDataPack {
+    #[must_use]
+    pub fn bot_id(mut self, bot_id: impl Into<String>) -> Self {
+        self.bot_id = Some(bot_id.into());
+        self
+    }
+
     #[must_use]
     pub fn path(mut self, path: impl Into<String>) -> Self {
         self.path = path.into();
@@ -254,6 +266,7 @@ where
 /// Provides a fluent interface for setting fields like `path`, `correlation`,
 /// `channel`, and `result` before building the final `DataPack`.
 pub struct DataPackBuilder {
+    pub bot_id:      Option<String>,
     pub path:        Option<String>,
     pub correlation: Option<Ulid>,
     pub channel:     Option<Channel>,
@@ -271,11 +284,19 @@ impl DataPackBuilder {
     #[must_use]
     pub const fn new() -> Self {
         Self {
+            bot_id:      None,
             path:        None,
             correlation: None,
             channel:     None,
             result:      None,
         }
+    }
+
+    /// Sets the `bot_id` field for the `DataPack`.
+    #[must_use]
+    pub fn bot_id(mut self, id: impl Into<String>) -> Self {
+        self.bot_id = Some(id.into());
+        self
     }
 
     /// Sets the `path` field for the `DataPack`.
@@ -313,6 +334,7 @@ impl DataPackBuilder {
     #[must_use]
     pub fn build(self) -> DataPack {
         let Self {
+            bot_id,
             path,
             correlation,
             channel,
@@ -324,6 +346,7 @@ impl DataPackBuilder {
         let result = result.unwrap_or(DataResult::Payload(rmpv::Value::Nil));
 
         DataPack {
+            bot_id,
             path,
             correlation,
             channel,
@@ -438,6 +461,7 @@ impl DataPack {
     #[must_use]
     pub fn into_request(self) -> RequestDataPack {
         let Self {
+            bot_id,
             path,
             correlation,
             channel,
@@ -445,6 +469,7 @@ impl DataPack {
         } = self;
         let payload: Result<_, _> = result.into();
         RequestDataPack {
+            bot_id,
             path: path.unwrap_or_default(),
             correlation,
             channel,

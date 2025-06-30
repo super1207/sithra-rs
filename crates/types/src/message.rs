@@ -3,7 +3,7 @@ use sithra_server::{
     extract::context::{Clientful, Context},
     server::PostError,
 };
-use sithra_transport::datapack::RequestDataPack;
+use sithra_transport::{channel::Channel, datapack::RequestDataPack};
 use smallvec::SmallVec;
 use typeshare::typeshare;
 
@@ -97,9 +97,36 @@ where
     }
 }
 
-pub trait ClientfulExt {}
+pub trait ClientfulExt {
+    fn send_message(
+        &self,
+        channel: impl Into<Channel> + Send + Sync,
+        msg: impl Into<SendMessage> + Send + Sync,
+    ) -> impl Future<Output = Result<Message, PostError>> + Send + Sync;
+}
 
-impl<C> ClientfulExt for C where C: Clientful {}
+impl<C> ClientfulExt for C
+where
+    C: Clientful + Send + Sync,
+{
+    async fn send_message(
+        &self,
+        channel: impl Into<Channel> + Send + Sync,
+        msg: impl Into<SendMessage> + Send + Sync,
+    ) -> Result<Message, PostError> {
+        let datapack = self
+            .client()
+            .post(
+                RequestDataPack::default()
+                    .path("/command/message.create")
+                    .channel(channel.into())
+                    .payload(msg.into()),
+            )?
+            .await?;
+        let msg = datapack.payload::<Message>()?;
+        Ok(msg)
+    }
+}
 
 pub mod event {
     use sithra_server::typed;
@@ -109,23 +136,13 @@ pub mod event {
 }
 
 pub mod command {
-    use sithra_server::{
-        response::{IntoResponse, Response},
-        typed,
-    };
-    use sithra_transport::datapack::RequestDataPack;
+    use sithra_server::typed;
 
     use super::SendMessage;
+    use crate::into_response;
     typed!("/command/message.create" => impl SendMessage; SendMessage);
 
-    impl IntoResponse for SendMessage {
-        fn into_response(self) -> Response {
-            RequestDataPack::default()
-                .path("/command/message.create")
-                .payload(self)
-                .into_response()
-        }
-    }
+    into_response!("/command/message.create", SendMessage);
 }
 
 #[cfg(test)]
@@ -142,9 +159,10 @@ mod tests {
         routing::router::Router,
         server::{Client, PostError},
     };
+    use sithra_transport::channel::Channel;
 
     use super::Message;
-    use crate::message::{ContextExt, SendMessage};
+    use crate::message::{ClientfulExt, ContextExt, SendMessage};
 
     #[derive(Clone)]
     struct AppState {
@@ -160,15 +178,29 @@ mod tests {
     }
 
     async fn on_message(ctx: Context<Message>) -> Result<(), PostError> {
-        ctx.reply(msg![text: &"Hello, world!", img: &"https://example.com/image.png"])
+        let _msg: &Message = ctx.payload();
+        ctx.reply(msg![
+            text: &"Hello, world!",
+            img: &"https://example.com/image.png"
+        ])
+        .await?;
+        Ok(())
+    }
+
+    async fn on_message2(channel: Channel, State(state): State<AppState>) -> Result<(), PostError> {
+        state
+            .send_message(
+                channel,
+                msg![
+                    text: &"Hello, world!",
+                    img: &"https://example.com/image.png"
+                ],
+            )
             .await?;
         Ok(())
     }
 
-    async fn on_message2(
-        Payload(_msg): Payload<Message>,
-        State(_): State<AppState>,
-    ) -> SendMessage {
+    async fn on_message3(Payload(_msg): Payload<Message>) -> SendMessage {
         msg![
             text: &"Hello, world!",
             img: &"https://example.com/image.png"
@@ -179,7 +211,7 @@ mod tests {
     #[tokio::test]
     async fn _type() {
         let _router = router! { Router::new() =>
-            Message[on_message, on_message2]
+            Message[on_message, on_message2, on_message3]
         };
     }
 }
