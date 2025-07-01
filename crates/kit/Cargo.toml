@@ -20,6 +20,7 @@ sithra-types.workspace = true
 workspace = true
 
 [features]
-default = ["layers", "logger"]
+default = ["layers", "logger", "initialize"]
 layers = ["tower", "pin-project", "futures-util"]
 logger = ["log", "once_cell"]
+initialize = ["futures-util"]

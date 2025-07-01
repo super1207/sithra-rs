@@ -11,6 +11,13 @@ use crate::{
     peer::Peer,
 };
 
+pub type FramedPeer = Framed<Peer, DataPackCodec>;
+
+#[must_use]
+pub fn framed(peer: Peer) -> Framed<Peer, DataPackCodec> {
+    Framed::new(peer, DataPackCodec::new())
+}
+
 /// Connects to a child process and returns a framed transport.
 ///
 /// # Errors

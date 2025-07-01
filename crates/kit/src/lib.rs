@@ -7,3 +7,6 @@ pub mod layers;
 
 #[cfg(feature = "logger")]
 pub mod logger;
+
+#[cfg(feature = "initialize")]
+pub mod initialize;
