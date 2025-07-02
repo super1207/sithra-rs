@@ -1,6 +1,6 @@
 use log::Log;
 use once_cell::sync::OnceCell;
-use sithra_server::server::ClientSink;
+use sithra_server::{server::ClientSink, transport::datapack::RequestDataPack};
 use sithra_types::log::Log as LogRequest;
 
 pub static LOGGER: OnceCell<ClientLogger> = OnceCell::new();
@@ -19,7 +19,7 @@ impl Log for ClientLogger {
             record.target().to_owned(),
         );
 
-        self.0.send(log_request).ok();
+        self.0.send(RequestDataPack::from(log_request)).ok();
     }
 
     fn flush(&self) {}

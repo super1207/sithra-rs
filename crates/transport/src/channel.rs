@@ -22,6 +22,7 @@ pub struct Channel {
     pub ty:        ChannelType,
     pub name:      String,
     pub parent_id: Option<String>,
+    pub self_id:   Option<String>,
 }
 
 impl Channel {
@@ -43,6 +44,7 @@ impl Channel {
             ty: ChannelType::Private,
             name,
             parent_id: None,
+            self_id: None,
         }
     }
 
@@ -65,6 +67,7 @@ impl Channel {
             ty: ChannelType::Group,
             name,
             parent_id: None,
+            self_id: None,
         }
     }
 
@@ -86,6 +89,7 @@ impl Channel {
             ty: ChannelType::Direct,
             name,
             parent_id: None,
+            self_id: None,
         }
     }
 
@@ -112,7 +116,14 @@ impl Channel {
             ty: ChannelType::Direct,
             name,
             parent_id: Some(group_id),
+            self_id: None,
         }
+    }
+
+    #[must_use]
+    pub fn set_self_id<T: ToString>(mut self, id: &T) -> Self {
+        self.self_id = Some(id.to_string());
+        self
     }
 }
 

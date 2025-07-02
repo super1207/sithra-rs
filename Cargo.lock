@@ -700,12 +700,16 @@ name = "sithra-adapter-onebot"
 version = "0.1.0"
 dependencies = [
  "futures-util",
+ "log",
  "once_cell",
+ "rmpv",
  "serde",
+ "serde_json",
  "sithra-kit",
  "tokio",
  "tokio-tungstenite",
  "triomphe",
+ "ulid",
 ]
 
 [[package]]

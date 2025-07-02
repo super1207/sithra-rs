@@ -343,10 +343,10 @@ impl ClientSink {
     /// This method panics if there is a `Ulid` conflict for the request's
     /// correlation ID. This is extremely unlikely to happen in practice.
     #[allow(clippy::result_large_err)]
-    pub fn send(&self, datapack: impl Into<RequestDataPack>) -> Result<(), PostError> {
+    pub fn send(&self, datapack: impl Into<DataPack>) -> Result<(), PostError> {
         let datapack = datapack.into();
         self.writer_tx
-            .send(datapack.into())
+            .send(datapack)
             .map_err(|err| PostError::ChannelClosed(err.0))?;
         Ok(())
     }

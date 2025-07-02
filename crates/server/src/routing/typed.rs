@@ -77,6 +77,7 @@ macro_rules! typed {
     (@default) => {
         impl<Sta> AllowedPayload for $crate::extract::state::State<Sta> {}
         impl AllowedPayload for $crate::transport::channel::Channel {}
+        impl AllowedPayload for $crate::extract::correlation::Correlation {}
     };
 }
 

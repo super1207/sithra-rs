@@ -98,6 +98,14 @@ impl IntoResponse for () {
     }
 }
 
+impl<R: IntoResponse> IntoResponse for Option<R> {
+    fn into_response(self) -> Response {
+        Response {
+            data: self.and_then(|v| v.into_response().data),
+        }
+    }
+}
+
 impl IntoResponse for Infallible {
     fn into_response(self) -> Response {
         match self {}

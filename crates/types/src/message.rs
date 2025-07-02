@@ -7,6 +7,8 @@ use sithra_transport::{channel::Channel, datapack::RequestDataPack};
 use smallvec::SmallVec;
 use typeshare::typeshare;
 
+pub const NIL: rmpv::Value = rmpv::Value::Nil;
+
 #[typeshare]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Message<Seg = Segment> {
@@ -19,9 +21,9 @@ pub struct Message<Seg = Segment> {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Segment {
     #[serde(rename = "type")]
-    ty:   String,
+    pub ty:   String,
     #[typeshare(serialized_as = "any")]
-    data: rmpv::Value,
+    pub data: rmpv::Value,
 }
 
 impl Segment {
@@ -42,14 +44,29 @@ impl Segment {
     pub fn img<T: ToString>(url: &T) -> Self {
         Self::image(url)
     }
+
+    pub fn at<T: ToString>(target: &T) -> Self {
+        Self {
+            ty:   "at".to_owned(),
+            data: target.to_string().into(),
+        }
+    }
+
+    /// # Errors
+    pub fn custom<T: ToString, V: Serialize>(ty: &T, data: V) -> Result<Self, rmpv::ext::Error> {
+        Ok(Self {
+            ty:   ty.to_string(),
+            data: rmpv::ext::to_value(data)?,
+        })
+    }
 }
 
 #[macro_export]
 macro_rules! msg {
-    ($seg:ident[$($segment:ident: $value:expr),*$(,)?]) => {
+    ($seg:ident[$($segment:ident$(: $value:expr)?),*$(,)?]) => {
         [
             $(
-                $seg::$segment($value),
+                $seg::$segment($($value)?),
             )*
         ].into_iter().collect::<$crate::smallvec::SmallVec<[$seg; 1]>>()
     };
@@ -136,6 +153,7 @@ where
 
 pub mod event {
     use sithra_server::typed;
+    pub const PATH: &str = "/event/message.created";
 
     use super::Message;
     typed!("/event/message.created" => impl Message; Message);
@@ -161,6 +179,7 @@ pub mod common {
     pub enum CommonSegment {
         Text(String),
         Image(String),
+        At(String),
         Unknown(Segment),
     }
 
@@ -176,6 +195,10 @@ pub mod common {
         pub fn img<T: ToString>(url: &T) -> Self {
             Self::image(url)
         }
+
+        pub fn at<T: ToString>(target: &T) -> Self {
+            Self::At(target.to_string())
+        }
     }
 
     impl TryFrom<Segment> for CommonSegment {
@@ -186,6 +209,7 @@ pub mod common {
             match ty.as_str() {
                 "text" => Ok(Self::Text(rmpv::ext::from_value(data)?)),
                 "image" => Ok(Self::Image(rmpv::ext::from_value(data)?)),
+                "at" => Ok(Self::At(rmpv::ext::from_value(data)?)),
                 _ => Ok(Self::Unknown(Segment { ty, data })),
             }
         }
@@ -196,6 +220,7 @@ pub mod common {
             match value {
                 CommonSegment::Text(text) => Self::text(&text),
                 CommonSegment::Image(image) => Self::image(&image),
+                CommonSegment::At(target) => Self::at(&target),
                 CommonSegment::Unknown(segment) => segment,
             }
         }

@@ -356,8 +356,16 @@ impl DataPackBuilder {
 
     /// Sets the `result` field to a `Payload` variant.
     #[must_use]
-    pub fn payload(mut self, payload: impl Into<rmpv::Value>) -> Self {
-        self.result = Some(DataResult::Payload(payload.into()));
+    pub fn payload(mut self, payload: impl Serialize) -> Self {
+        let payload = rmpv::ext::to_value(payload);
+        match payload {
+            Ok(payload) => {
+                self.result = Some(DataResult::Payload(payload));
+            }
+            Err(err) => {
+                return self.error(&err);
+            }
+        }
         self
     }
 
@@ -370,8 +378,17 @@ impl DataPackBuilder {
 
     /// Builds a `DataPack` with a `Payload` result.
     #[must_use]
-    pub fn build_with_payload(self, payload: impl Into<rmpv::Value>) -> DataPack {
-        self.payload(payload).build()
+    pub fn build_with_payload(mut self, payload: impl Serialize) -> DataPack {
+        let payload = rmpv::ext::to_value(payload);
+        match payload {
+            Ok(payload) => {
+                self.result = Some(DataResult::Payload(payload));
+            }
+            Err(err) => {
+                return self.error(&err).build();
+            }
+        }
+        self.build()
     }
 
     /// Builds a `DataPack` with an `Error` result.
