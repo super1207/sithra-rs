@@ -4,6 +4,7 @@ mod macros;
 pub mod __private {
     pub use sithra_server;
     pub use sithra_transport;
+    pub use rmpv;
 }
 
 pub mod initialize;

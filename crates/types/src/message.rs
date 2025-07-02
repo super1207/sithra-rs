@@ -9,30 +9,34 @@ use typeshare::typeshare;
 
 #[typeshare]
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct Message {
+pub struct Message<Seg = Segment> {
     pub id:      String,
-    #[typeshare(serialized_as = "Vec<SegmentType>")]
-    pub content: SmallVec<[SegmentType; 1]>,
+    #[typeshare(serialized_as = "Vec<Seg>")]
+    pub content: SmallVec<[Seg; 1]>,
 }
 
 #[typeshare]
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-#[serde(tag = "type", content = "parameter")]
-pub enum SegmentType {
-    /// Text segment, Content
-    Text(String),
-    /// Image segment, Source Url
-    Image(String),
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Segment {
+    #[serde(rename = "type")]
+    ty:   String,
+    #[typeshare(serialized_as = "any")]
+    data: rmpv::Value,
 }
 
-impl SegmentType {
+impl Segment {
     pub fn text<T: ToString>(content: &T) -> Self {
-        Self::Text(content.to_string())
+        Self {
+            ty:   "text".to_owned(),
+            data: content.to_string().into(),
+        }
     }
 
     pub fn image<T: ToString>(url: &T) -> Self {
-        Self::Image(url.to_string())
+        Self {
+            ty:   "image".to_owned(),
+            data: url.to_string().into(),
+        }
     }
 
     pub fn img<T: ToString>(url: &T) -> Self {
@@ -42,32 +46,34 @@ impl SegmentType {
 
 #[macro_export]
 macro_rules! msg {
-    [$($segment:ident: $value:expr),*$(,)?] => {
+    ($seg:ident[$($segment:ident: $value:expr),*$(,)?]) => {
         [
             $(
-                $crate::message::SegmentType::$segment($value),
+                $seg::$segment($value),
             )*
-        ].into_iter().collect::<$crate::smallvec::SmallVec<[$crate::message::SegmentType; 1]>>()
+        ].into_iter().collect::<$crate::smallvec::SmallVec<[$seg; 1]>>()
     };
 }
 
 #[typeshare]
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct SendMessage {
-    #[typeshare(serialized_as = "Vec<SegmentType>")]
-    pub content: SmallVec<[SegmentType; 1]>,
+pub struct SendMessage<Seg = Segment> {
+    #[typeshare(serialized_as = "Vec<Seg>")]
+    pub content: SmallVec<[Seg; 1]>,
 }
 
 impl SendMessage {
     #[must_use]
-    pub const fn new(content: SmallVec<[SegmentType; 1]>) -> Self {
+    pub const fn new(content: SmallVec<[Segment; 1]>) -> Self {
         Self { content }
     }
 }
 
-impl From<SmallVec<[SegmentType; 1]>> for SendMessage {
-    fn from(content: SmallVec<[SegmentType; 1]>) -> Self {
-        Self { content }
+impl<Seg: Into<Segment>> From<SmallVec<[Seg; 1]>> for SendMessage {
+    fn from(content: SmallVec<[Seg; 1]>) -> Self {
+        Self {
+            content: content.into_iter().map(Into::into).collect(),
+        }
     }
 }
 
@@ -145,6 +151,78 @@ pub mod command {
     into_response!("/command/message.create", SendMessage);
 }
 
+pub mod common {
+    use de::Error as _;
+    use serde::{Deserialize, Serialize, de};
+
+    use crate::message::Segment;
+
+    #[derive(Debug, Clone)]
+    pub enum CommonSegment {
+        Text(String),
+        Image(String),
+        Unknown(Segment),
+    }
+
+    impl CommonSegment {
+        pub fn text<T: ToString>(content: &T) -> Self {
+            Self::Text(content.to_string())
+        }
+
+        pub fn image<T: ToString>(url: &T) -> Self {
+            Self::Image(url.to_string())
+        }
+
+        pub fn img<T: ToString>(url: &T) -> Self {
+            Self::image(url)
+        }
+    }
+
+    impl TryFrom<Segment> for CommonSegment {
+        type Error = rmpv::ext::Error;
+
+        fn try_from(value: Segment) -> Result<Self, Self::Error> {
+            let Segment { ty, data } = value;
+            match ty.as_str() {
+                "text" => Ok(Self::Text(rmpv::ext::from_value(data)?)),
+                "image" => Ok(Self::Image(rmpv::ext::from_value(data)?)),
+                _ => Ok(Self::Unknown(Segment { ty, data })),
+            }
+        }
+    }
+
+    impl From<CommonSegment> for Segment {
+        fn from(value: CommonSegment) -> Self {
+            match value {
+                CommonSegment::Text(text) => Self::text(&text),
+                CommonSegment::Image(image) => Self::image(&image),
+                CommonSegment::Unknown(segment) => segment,
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for CommonSegment {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+            D::Error: de::Error,
+        {
+            let raw = Segment::deserialize(deserializer)?;
+            raw.try_into().map_err(|_| D::Error::custom("Invalid segment"))
+        }
+    }
+
+    impl Serialize for CommonSegment {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            let segment: Segment = self.clone().into();
+            segment.serialize(serializer)
+        }
+    }
+}
+
 #[cfg(test)]
 #[allow(unused)]
 mod tests {
@@ -162,7 +240,7 @@ mod tests {
     use sithra_transport::channel::Channel;
 
     use super::Message;
-    use crate::message::{ClientfulExt, ContextExt, SendMessage};
+    use crate::message::{ClientfulExt, ContextExt, SendMessage, common::CommonSegment};
 
     #[derive(Clone)]
     struct AppState {
@@ -179,10 +257,10 @@ mod tests {
 
     async fn on_message(ctx: Context<Message>) -> Result<(), PostError> {
         let _msg: &Message = ctx.payload();
-        ctx.reply(msg![
+        ctx.reply(msg!(CommonSegment[
             text: &"Hello, world!",
             img: &"https://example.com/image.png"
-        ])
+        ]))
         .await?;
         Ok(())
     }
@@ -191,20 +269,20 @@ mod tests {
         state
             .send_message(
                 channel,
-                msg![
+                msg!(CommonSegment[
                     text: &"Hello, world!",
                     img: &"https://example.com/image.png"
-                ],
+                ]),
             )
             .await?;
         Ok(())
     }
 
     async fn on_message3(Payload(_msg): Payload<Message>) -> SendMessage {
-        msg![
+        msg!(CommonSegment[
             text: &"Hello, world!",
             img: &"https://example.com/image.png"
-        ]
+        ])
         .into()
     }
 

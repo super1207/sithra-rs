@@ -3,20 +3,14 @@
 */
 
 
-export enum SegmentType {
-	Text = "text",
-	Image = "image",
-	Unknown = "unknown",
+export interface Message<Seg> {
+	id: string;
+	content: Seg[];
 }
 
 export interface Segment {
-	type: SegmentType;
-	content: string;
-}
-
-export interface Message {
-	id: string;
-	content: Segment[];
+	type: string;
+	data: any;
 }
 
 export interface SendMessage {
