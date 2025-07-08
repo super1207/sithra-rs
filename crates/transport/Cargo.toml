@@ -16,6 +16,7 @@ serde.workspace = true
 either.workspace = true
 triomphe.workspace = true
 typeshare.workspace = true
+log.workspace = true
 
 [lints]
 workspace = true

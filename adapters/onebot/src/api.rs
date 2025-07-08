@@ -15,7 +15,7 @@ pub mod response {
 
     impl ApiResponse {
         #[must_use]
-        pub fn into_rep(self) -> DataPack {
+        pub fn into_rep(self, bot_id: &str) -> DataPack {
             let Self {
                 retcode,
                 echo,
@@ -24,6 +24,7 @@ pub mod response {
             let Some(data) = data else {
                 return DataPack::builder()
                     .correlate(echo)
+                    .bot_id(bot_id)
                     .build_with_error(&format!("Call OneBot API Error, RETCODE: {retcode}"));
             };
             match data {

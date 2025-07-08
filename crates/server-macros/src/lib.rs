@@ -61,10 +61,10 @@
 //     match output_str.parse() {
 //         Ok(tokens) => tokens,
 //         Err(e) => {
-//             let error = format!("Failed to parse generated string `{output_str}`: {e}");
-//             TokenStream::from(
-//                 syn::Error::new(proc_macro2::Span::call_site(), error).to_compile_error(),
-//             )
+//             let error = format!("Failed to parse generated string
+// `{output_str}`: {e}");             TokenStream::from(
+//                 syn::Error::new(proc_macro2::Span::call_site(),
+// error).to_compile_error(),             )
 //         }
 //     }
 // }

@@ -13,7 +13,7 @@ macro_rules! init {
                 break Err("Connection closed".to_owned());
             };
             if let Ok(msg) = msg {
-                let is_init = msg.path.as_ref().is_some_and(|p| p == Initialize::<$config>::path());
+                let is_init = msg.path.as_ref().is_some_and(|p| p == $crate::types::initialize::Initialize::<$config>::path());
                 if is_init {
                     let config = msg.payload::<$config>();
                     break config;

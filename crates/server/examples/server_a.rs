@@ -21,14 +21,16 @@ async fn main() {
     let (writer, reader) = peer.split();
     let router = Router::new().route("/print", on(print));
     let server = Server::new();
-    let client = server.client();
+    let client = server.client().sink();
     tokio::spawn(async move {
         loop {
             tokio::time::sleep(Duration::from_millis(500)).await;
-            let Ok(response) = client.post(RequestDataPack::default().path("/hello_world")) else {
-                continue;
-            };
-            drop(response);
+            client.send(RequestDataPack::default().path("/hello_world")).unwrap();
+            // let Ok(response) =
+            // client.post(RequestDataPack::default().path("/hello_world")) else
+            // {     continue;
+            // };
+            // drop(response);
             // response.await.ok();
         }
     });

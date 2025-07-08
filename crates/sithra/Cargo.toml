@@ -19,10 +19,16 @@ smallvec.workspace = true
 tower.workspace = true
 matchit.workspace = true
 triomphe.workspace = true
+ahash.workspace = true
+log.workspace = true
+toml = "0.9"
+tracing-subscriber = "0.3"
+
 
 # Workspace dependencies
 
 sithra-kit.workspace = true
+anyhow = "1.0.98"
 
 [lints]
 workspace = true

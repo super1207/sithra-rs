@@ -1,14 +1,21 @@
 use serde::{Deserialize, Serialize};
 use sithra_kit::{
-    transport::{channel::Channel, datapack::{DataPack, RequestDataPack}},
+    transport::{
+        channel::Channel,
+        datapack::{DataPack, RequestDataPack},
+    },
     types::{message::Message, smallvec::SmallVec},
 };
 
-use crate::message::{OneBotSegment, internal::InternalOneBotSegment};
+use crate::{
+    message::{OneBotSegment, internal::InternalOneBotSegment},
+    util::de_str_from_num,
+};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RawEvent {
     time:    u64,
+    #[serde(deserialize_with = "de_str_from_num")]
     self_id: String,
     #[serde(flatten)]
     ty:      PostType,
@@ -35,7 +42,7 @@ impl RawEvent {
     }
 
     #[must_use]
-    pub fn into_req(self) -> Option<DataPack> {
+    pub fn into_req(self, bot_id: &str) -> Option<DataPack> {
         let channel = self.channel();
         let Self {
             time: _,
@@ -48,10 +55,11 @@ impl RawEvent {
                 let req: RequestDataPack = RequestDataPack::default()
                     .path(sithra_kit::types::message::event::PATH)
                     .channel_opt(channel)
+                    .bot_id(bot_id)
                     .payload(message);
                 Some(req.into())
-            },
-            _ => None
+            }
+            _ => None,
         }
     }
 }
@@ -71,8 +79,10 @@ pub enum PostType {
 pub struct MessageEvent {
     #[serde(flatten)]
     pub message_type: MessageEventKind,
+    #[serde(deserialize_with = "de_str_from_num")]
     pub message_id:   String,
     pub message:      SmallVec<[InternalOneBotSegment; 1]>,
+    #[serde(deserialize_with = "de_str_from_num")]
     pub user_id:      String,
 }
 
@@ -96,6 +106,7 @@ pub enum MessageEventKind {
         sender: PrivateSender,
     },
     Group {
+        #[serde(deserialize_with = "de_str_from_num")]
         group_id: String,
         sender:   GroupSender,
     },

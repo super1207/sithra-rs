@@ -25,20 +25,8 @@ where
 }
 
 pub mod command {
-    use serde::Deserialize;
-    use sithra_server::typed;
-
     use super::Initialize;
 
-    // typed!("/initialize" => impl Initialize[C];);
-
-    pub trait AllowedPayload {}
-    impl<C> AllowedPayload for sithra_server::extract::payload::Payload<Initialize<C>> {}
-    impl<C, S> AllowedPayload for sithra_server::extract::context::Context<Initialize<C>, S> where
-        C: for<'de> Deserialize<'de>
-    {
-    }
-    typed!(@private A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z);
     #[allow(dead_code)]
     impl<C> Initialize<C> {
         /// Create a new endpoint for the given route and handler.
@@ -52,7 +40,7 @@ pub mod command {
         )
         where
             H: sithra_server::handler::Handler<T, S>,
-            T: AllowedPayload + 'static,
+            T: 'static,
             S: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'static,
         {
             (
@@ -69,7 +57,7 @@ pub mod command {
         ) -> sithra_server::routing::endpoint::Endpoint<S, ::std::convert::Infallible>
         where
             H: sithra_server::handler::Handler<T, S>,
-            T: AllowedPayload + 'static,
+            T: 'static,
             S: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'static,
         {
             sithra_server::routing::endpoint::Endpoint::BoxedHandler(
@@ -87,7 +75,6 @@ pub mod command {
         pub const fn _check<H, T, S>(_handler: &H) -> &'static str
         where
             H: sithra_server::handler::Handler<T, S>,
-            T: AllowedPayload + 'static,
             S: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'static,
         {
             "/initialize"
@@ -97,11 +84,9 @@ pub mod command {
         pub const fn __check<H, T, S>(handler: H) -> H
         where
             H: sithra_server::handler::Handler<T, S>,
-            T: AllowedPayload + 'static,
             S: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'static,
         {
             handler
         }
     }
-    typed!(@default);
 }

@@ -10,3 +10,6 @@ pub mod logger;
 
 #[cfg(feature = "initialize")]
 pub mod initialize;
+
+#[cfg(feature = "plugin")]
+pub mod plugin;

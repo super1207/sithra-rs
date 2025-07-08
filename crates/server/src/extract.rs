@@ -1,4 +1,5 @@
 pub mod channel;
+pub mod client;
 pub mod context;
 pub mod correlation;
 pub mod from_ref;

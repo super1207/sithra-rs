@@ -7,11 +7,12 @@ use std::{
     task::{Context, Poll},
 };
 
+use ahash::RandomState;
 use futures_util::FutureExt;
 use parking_lot::Mutex;
 use tokio::sync::oneshot;
 
-type OneshotMapInner<K, V> = Mutex<HashMap<K, Entry<V>>>;
+type OneshotMapInner<K, V> = Mutex<HashMap<K, Entry<V>, RandomState>>;
 
 pub struct SharedOneshotMap<K, V>
 where
@@ -47,7 +48,7 @@ where
     #[must_use]
     pub fn new() -> Self {
         Self {
-            inner: Arc::new(Mutex::new(HashMap::new())),
+            inner: Arc::new(Mutex::new(HashMap::default())),
         }
     }
 

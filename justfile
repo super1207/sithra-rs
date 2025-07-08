@@ -8,3 +8,7 @@ example_server:
 
 typeshare:
     typeshare . --lang=typescript -d=sithra-js/types/src
+
+run:
+    cargo build --all
+    cargo run

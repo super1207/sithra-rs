@@ -81,8 +81,10 @@ pub struct SendMessage<Seg = Segment> {
 
 impl SendMessage {
     #[must_use]
-    pub const fn new(content: SmallVec<[Segment; 1]>) -> Self {
-        Self { content }
+    pub fn new<Seg: Into<Segment>>(content: SmallVec<[Seg; 1]>) -> Self {
+        Self {
+            content: content.into_iter().map(Into::into).collect(),
+        }
     }
 }
 
@@ -101,9 +103,10 @@ pub trait ContextExt {
     ) -> impl Future<Output = Result<Message, PostError>> + Send + Sync;
 }
 
-impl<S> ContextExt for Context<Message, S>
+impl<S, Seg> ContextExt for Context<Message<Seg>, S>
 where
     S: Clientful + Send + Sync,
+    Seg: for<'de> Deserialize<'de> + Send + Sync,
 {
     async fn reply(&self, msg: impl Into<SendMessage> + Send + Sync) -> Result<Message, PostError> {
         let datapack = self
@@ -156,7 +159,7 @@ pub mod event {
     pub const PATH: &str = "/event/message.created";
 
     use super::Message;
-    typed!("/event/message.created" => impl Message; Message);
+    typed!("/event/message.created" => impl Message);
 }
 
 pub mod command {
@@ -164,7 +167,7 @@ pub mod command {
 
     use super::SendMessage;
     use crate::into_response;
-    typed!("/command/message.create" => impl SendMessage; SendMessage);
+    typed!("/command/message.create" => impl SendMessage);
 
     into_response!("/command/message.create", SendMessage);
 }

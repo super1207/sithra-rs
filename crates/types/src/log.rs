@@ -26,7 +26,7 @@ pub mod command {
     use super::Log;
     use crate::into_response;
 
-    typed!("/log.create" => impl Log; Log);
+    typed!("/log.create" => impl Log);
     into_response!("/log.create", Log);
 
     impl From<Log> for RequestDataPack {

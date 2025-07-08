@@ -10,6 +10,10 @@ pin-project = { workspace = true, optional = true }
 futures-util = { workspace = true, optional = true }
 log = { workspace = true, optional = true }
 once_cell = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+thiserror = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+rmpv = { workspace = true, optional = true }
 
 # Workspace dependencies
 
@@ -20,7 +24,8 @@ sithra-types.workspace = true
 workspace = true
 
 [features]
-default = ["layers", "logger", "initialize"]
+default = ["layers", "logger", "initialize", "plugin"]
 layers = ["tower", "pin-project", "futures-util"]
 logger = ["log", "once_cell"]
 initialize = ["futures-util"]
+plugin = ["serde", "thiserror", "tokio", "rmpv"]

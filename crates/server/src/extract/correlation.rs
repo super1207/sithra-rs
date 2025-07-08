@@ -5,7 +5,7 @@ use std::{
 
 use ulid::Ulid;
 
-use crate::{extract::FromRequest};
+use crate::extract::FromRequest;
 
 pub struct Correlation(pub Ulid);
 

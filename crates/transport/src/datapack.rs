@@ -11,9 +11,10 @@ use crate::{channel::Channel, util::get_chunk};
 ///
 /// Used for low-level serialization/deserialization of data packets.
 /// The `data_len` field stores the length of the `data` field in bytes.
+#[derive(Clone)]
 pub struct RawDataPack {
     data_len: u32,
-    data:     Bytes,
+    pub data: Bytes,
 }
 
 impl RawDataPack {
@@ -107,7 +108,7 @@ impl Decoder for RawDataPackCodec {
 ///
 /// Contains optional metadata (`path`, `channel`), a correlation ID,
 /// and a `result` field that can be either a payload or an error.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DataPack {
     pub bot_id:      Option<String>,
     pub path:        Option<String>,
@@ -221,7 +222,7 @@ impl RequestDataPack {
 }
 
 /// Represents the result of a data operation, either a payload or an error.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum DataResult {
     /// Successful operation with a payload value.
     #[serde(rename = "payload")]

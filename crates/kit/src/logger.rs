@@ -25,6 +25,8 @@ impl Log for ClientLogger {
     fn flush(&self) {}
 }
 
+#[allow(clippy::missing_panics_doc)]
 pub fn init_log(client_sink: ClientSink) {
     LOGGER.set(ClientLogger(client_sink)).ok();
+    log::set_logger(LOGGER.get().expect("unreachable")).unwrap();
 }

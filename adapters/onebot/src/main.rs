@@ -8,33 +8,23 @@ use sithra_adapter_onebot::{
     message::OneBotSegment,
 };
 use sithra_kit::{
-    init,
     layers::BotId,
-    logger::init_log,
+    plugin::Plugin,
     server::{
-        extract::{
-            context::Context as RawContext, correlation::Correlation, payload::Payload,
-            state::State,
-        },
+        extract::{correlation::Correlation, payload::Payload, state::State},
         response::Response,
-        routing::router::Router,
-        server::Server,
     },
-    transport::{channel::Channel, peer::Peer},
-    types::{initialize::Initialize, message::SendMessage},
+    transport::channel::Channel,
+    types::message::SendMessage,
 };
 use tokio::sync::mpsc;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message as WsMessage};
-use triomphe::Arc;
-
-type SharedConfig = Arc<Config>;
 
 // type Context<T> = RawContext<T, AdapterState>;
 
 #[derive(Clone)]
 struct AdapterState {
-    config: SharedConfig,
-    ws_tx:  mpsc::UnboundedSender<WsMessage>,
+    ws_tx: mpsc::UnboundedSender<WsMessage>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -45,13 +35,7 @@ struct Config {
 
 #[tokio::main]
 async fn main() {
-    let peer = Peer::new();
-
-    let (peer, config) = init!(peer, Config);
-
-    let config = config.unwrap();
-
-    let (peer_write, peer_read) = peer.split();
+    let (plugin, config) = Plugin::<Config>::new().await.expect("Init plugin failed");
 
     let (ws_stream, _) = connect_async(&config.ws_url).await.unwrap();
     let (mut ws_write, mut ws_read) = ws_stream.split();
@@ -62,10 +46,11 @@ async fn main() {
         }
     });
 
-    let server = Server::new();
-    let client = server.client();
-    init_log(client.sink());
+    let bot_id = format!("{}-{}", "onebot", process::id());
+
+    let client = plugin.server.client();
     let sink = client.sink();
+    let bot_id_ = bot_id.clone();
     let recv_loop = tokio::spawn(async move {
         while let Some(message) = ws_read.next().await {
             let message = message.expect("Recv message from ws Error");
@@ -84,8 +69,8 @@ async fn main() {
                 }
             };
             let message = match message {
-                OneBotMessage::Api(api) => Some(api.into_rep()),
-                OneBotMessage::Event(event) => event.into_req(),
+                OneBotMessage::Api(api) => Some(api.into_rep(&bot_id_)),
+                OneBotMessage::Event(event) => event.into_req(&bot_id_),
             };
             let Some(message) = message else {
                 continue;
@@ -94,26 +79,20 @@ async fn main() {
         }
     });
 
-    let state = AdapterState {
-        config: Arc::new(config),
-        ws_tx,
-    };
+    let state = AdapterState { ws_tx };
 
-    let bot_id = format!("{}-{}", "onebot", process::id());
-    let router = Router::new()
-        .route_typed(SendMessage::on(send_message))
-        .layer(BotId::new(&bot_id))
-        .with_state(state);
-
-    let mut serve = server.service(router).serve(peer_write, peer_read);
+    let plugin = plugin.map(|r| {
+        r.route_typed(SendMessage::on(send_message))
+            .layer(BotId::new(&bot_id))
+            .with_state(state)
+    });
 
     tokio::select! {
         _ = send_loop => {}
         _ = recv_loop => {}
+        _ = plugin.run().join_all() => {}
         _ = tokio::signal::ctrl_c() => {}
     }
-
-    serve.abort_all();
 }
 
 async fn send_message(
