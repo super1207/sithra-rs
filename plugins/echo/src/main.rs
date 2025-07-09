@@ -24,6 +24,7 @@ async fn echo(Payload(msg): Payload<Message<CommonSegment>>) -> Option<SendMessa
         }
     });
     let text = text.strip_prefix("echo ")?.to_owned();
+    log::info!("echo recv: {text}");
     let Message { mut content, .. } = msg;
     {
         let first = content.first_mut()?;

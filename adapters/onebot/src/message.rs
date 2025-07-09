@@ -29,7 +29,10 @@ pub mod internal {
             file: String,
         },
         At {
+            #[serde(default)]
             id: String,
+            #[serde(default)]
+            qq: String,
         },
         Rps,
         Dice,
@@ -98,6 +101,7 @@ impl OneBotSegment {
     pub fn at<T: ToString>(target: &T) -> Self {
         Self::Typed(InternalOneBotSegment::At {
             id: target.to_string(),
+            qq: target.to_string(),
         })
     }
 
@@ -179,9 +183,13 @@ impl TryFrom<Segment> for OneBotSegment {
             "video" => Ok(Self::Typed(InternalOneBotSegment::Video {
                 file: rmpv::ext::from_value(data)?,
             })),
-            "at" => Ok(Self::Typed(InternalOneBotSegment::At {
-                id: rmpv::ext::from_value(data)?,
-            })),
+            "at" => {
+                let id: String = rmpv::ext::from_value(data)?;
+                Ok(Self::Typed(InternalOneBotSegment::At {
+                    id: id.clone(),
+                    qq: id,
+                }))
+            }
             "rps" => Ok(Self::Typed(InternalOneBotSegment::Rps)),
             "dice" => Ok(Self::Typed(InternalOneBotSegment::Dice)),
             "shake" => Ok(Self::Typed(InternalOneBotSegment::Shake)),
@@ -214,7 +222,13 @@ impl TryFrom<OneBotSegment> for Segment {
                 InternalOneBotSegment::Image { file } => Ok(Self::image(&file)),
                 InternalOneBotSegment::Record { file } => Self::custom(&"file", file),
                 InternalOneBotSegment::Video { file } => Self::custom(&"video", file),
-                InternalOneBotSegment::At { id } => Ok(Self::at(&id)),
+                InternalOneBotSegment::At { id, qq } => {
+                    if qq.is_empty() {
+                        Ok(Self::at(&id))
+                    } else {
+                        Ok(Self::at(&qq))
+                    }
+                }
                 InternalOneBotSegment::Rps => Self::custom(&"rps", NIL),
                 InternalOneBotSegment::Dice => Self::custom(&"dice", NIL),
                 InternalOneBotSegment::Shake => Self::custom(&"shake", NIL),

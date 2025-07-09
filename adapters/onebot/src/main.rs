@@ -61,10 +61,13 @@ async fn main() {
                     continue;
                 }
             };
+            if message.is_empty() {
+                continue;
+            }
             let message = match serde_json::from_str::<OneBotMessage>(&message) {
                 Ok(message) => message,
                 Err(err) => {
-                    log::error!("Parse message from ws Error: {err}");
+                    log::error!("Parse message from ws Error: {err}\traw: {message:?}");
                     continue;
                 }
             };

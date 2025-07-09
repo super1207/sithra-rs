@@ -1,4 +1,5 @@
 pub mod response {
+    use crate::util::de_str_from_num;
     use serde::{Deserialize, Serialize};
     use sithra_kit::{
         transport::datapack::DataPack,
@@ -47,6 +48,7 @@ pub mod response {
 
     #[derive(Debug, Clone, Deserialize, Serialize)]
     pub struct SendMessageResponse {
+        #[serde(deserialize_with = "de_str_from_num")]
         message_id: String,
     }
 }
