@@ -1,4 +1,14 @@
-echo:
-  cargo build -p echo
-  mv -f ./target/debug/echo.exe ./plugins/echo.exe
-  cargo run
+default:
+    just --list
+
+example_server:
+    cargo build -p sithra-server --example server_a
+    cargo build -p sithra-server --example server_b
+    cd target/debug/examples && ./server_a
+
+typeshare:
+    typeshare . --lang=typescript -d=sithra-js/types/src
+
+run:
+    cargo build --all
+    cargo run

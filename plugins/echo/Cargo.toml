@@ -4,7 +4,11 @@ version = "0.1.0"
 edition.workspace = true
 
 [dependencies]
-ioevent.workspace = true
+sithra-kit.workspace = true
 tokio.workspace = true
-sithra_common.workspace = true
 log.workspace = true
+serde.workspace = true
+
+
+[lints]
+workspace = true

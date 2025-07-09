@@ -1,46 +1,34 @@
-use event::MessageEventFlattened as Message;
-use ioevent::{prelude::*, rpc::*};
-use log::info;
-use sithra_common::prelude::*;
+use sithra_kit::{
+    plugin::Plugin,
+    server::extract::payload::Payload,
+    types::message::{Message, SendMessage, common::CommonSegment},
+};
 
-const SUBSCRIBERS: &[ioevent::Subscriber<CommonState>] =
-    &[create_subscriber!(poke_reply), create_subscriber!(echo_msg)];
-
-#[subscriber]
-async fn echo_msg(state: State<CommonState>, msg: Message) -> Result {
-    if msg.starts_with("echo ") {
-        info!("echo 插件收到{}发送的消息", msg.sender.call_name());
-        let message = msg.message.clone().trim_start_matches("echo ");
-        let id = msg.reply(&state, message.clone()).await?;
-        info!("echo 插件回复消息: {:?}", id);
+#[tokio::main]
+async fn main() {
+    let (plugin, ()) = Plugin::new().await.unwrap();
+    let plugin = plugin.map(|r| r.route_typed(Message::on(echo)));
+    log::info!("Echo plugin started");
+    tokio::select! {
+        _ = plugin.run().join_all() => {}
+        _ = tokio::signal::ctrl_c() => {}
     }
-    Ok(())
 }
 
-#[subscriber]
-async fn poke_reply(state: State<CommonState>, msg: event::NotifyEvent) -> Result {
-    match msg {
-        event::NotifyEvent::Poke {
-            group_id,
-            user_id,
-            target_id,
-        } => {
-            if target_id == state.self_id() {
-                info!("是在戳我！");
-                let message = vec![
-                    MessageNode::At(user_id.into()),
-                    MessageNode::Text(" 你要干嘛~".to_string()),
-                ];
-                let msg = SendGroupMsgParams::new(group_id.into(), message)?;
-                let _ = state.call(&msg).await?;
-            }
+async fn echo(Payload(msg): Payload<Message<CommonSegment>>) -> Option<SendMessage> {
+    let text = msg.content.iter().fold(String::new(), |f, s| {
+        if let CommonSegment::Text(text) = s {
+            f + text
+        } else {
+            f
         }
-        _ => {}
+    });
+    let text = text.strip_prefix("echo ")?.to_owned();
+    log::info!("echo recv: {text}");
+    let Message { mut content, .. } = msg;
+    {
+        let first = content.first_mut()?;
+        *first = CommonSegment::text(&text);
     }
-    Ok(())
-}
-
-#[sithra_common::main(subscribers = SUBSCRIBERS, state = CommonState)]
-async fn main(_effect_wright: &ioevent::EffectWright) {
-    info!("echo 示例插件启动成功");
+    Some(SendMessage::new(content))
 }

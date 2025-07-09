@@ -1,0 +1,15 @@
+{
+  "name": "sithra-types",
+  "version": "0.1.0",
+  "description": "sithra types",
+  "license": "Unlicense",
+  "author": "",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "files": [
+    "src/**/*"
+  ],
+  "types": "src/index.ts"
+}

@@ -1,31 +1,75 @@
 [workspace]
 resolver = "3"
-members = ["crates/*", "plugins/*"]
+members = ["crates/*", "adapters/*", "plugins/*"]
 default-members = ["crates/sithra"]
 
 [workspace.package]
 edition = "2024"
 
 [workspace.dependencies]
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["full"] }
+futures-util = { version = "0.3", features = ["sink"] }
+rmp-serde = { version = "1" }
+rmpv = { version = "1", features = ["with-serde"] }
+pin-project = { version = "1" }
+bytes = { version = "1" }
+thiserror = { version = "2" }
+ulid = { version = "1", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+either = { version = "1" }
+tower = { version = "0.5", features = ["full"] }
+smallvec = { version = "1", features = ["const_generics", "serde"] }
+matchit = { version = "0.8" }
+triomphe = { version = "0.1" }
+typeshare = { version = "1" }
+log = { version = "0.4", features = ["serde"] }
+once_cell = { version = "1.21.3" }
+ahash = "0.8.12"
 
-# Workspace member crates
+# Workspace
 
-sithra_common = { path = "crates/sithra_common" }
-sithra_macro = { path = "crates/sithra_macro" }
+sithra-transport = { path = "crates/transport" }
+sithra-types = { path = "crates/types" }
+sithra-server = { path = "crates/server" }
+sithra-kit = { path = "crates/kit" }
+sithra-server-macros = { path = "crates/server-macros" }
 
-# Extrenal crates
+[workspace.lints.clippy]
+nursery = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
 
-ioevent = { version = "0.1.0-rc.2", git = "https://github.com/BERADQ/ioevent.git" }
-serde = { version = "1.0.216", features = ["derive", "serde_derive"] }
-serde_json = "1.0.140"
-tokio = { version = "1.44.2", features = ["full"] }
-thiserror = "2.0.12"
-log = "0.4.27"
+type_complexity = "allow"
+option_if_let_else = "allow"
 
-# Examples Extrenal crates
-reqwest = { version = "0.12.15", features = ["json"] }
-scraper = { version = "0.23.1", default-features = false }
-sithra_headless_common = { git = "https://github.com/SithraBot/sithra-rs-headless.git" }
+collapsible_if = "allow"
+
+await_holding_lock = "warn"
+dbg_macro = "warn"
+empty_enum = "warn"
+enum_glob_use = "warn"
+exit = "warn"
+filter_map_next = "warn"
+fn_params_excessive_bools = "warn"
+if_let_mutex = "warn"
+imprecise_flops = "warn"
+inefficient_to_string = "warn"
+linkedlist = "warn"
+lossy_float_literal = "warn"
+macro_use_imports = "warn"
+match_wildcard_for_single_variants = "warn"
+mem_forget = "warn"
+needless_borrow = "warn"
+needless_continue = "warn"
+option_option = "warn"
+rest_pat_in_fully_bound_structs = "warn"
+str_to_string = "warn"
+suboptimal_flops = "warn"
+todo = "warn"
+uninlined_format_args = "warn"
+unnested_or_patterns = "warn"
+unused_self = "warn"
+verbose_file_reads = "warn"
 
 [profile.dev]
 split-debuginfo = "unpacked"
