@@ -1,6 +1,5 @@
 use std::{
     num::{IntErrorKind, ParseIntError},
-    ops::Try,
     time::Duration,
 };
 
