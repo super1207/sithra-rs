@@ -1,4 +1,8 @@
-use std::{num::ParseIntError, time::Duration};
+use std::{
+    num::{IntErrorKind, ParseIntError},
+    ops::Try,
+    time::Duration,
+};
 
 use serde::{Deserialize, Serialize};
 use sithra_kit::{
@@ -17,12 +21,12 @@ use sithra_kit::{
 use triomphe::Arc;
 
 macro_rules! tap_err {
-    ($val:ident, $err:expr, $msg:expr) => {
+    ($val:ident, $action:expr) => {
         match $val {
             Ok(res) => res,
             Err(err) => {
-                log::error!($err, err);
-                return Some(msg!(H[text: $msg]).into());
+                log::error!(concat!("Failed to ", $action, " channel: {:?}"), err);
+                return Some(msg!(H[text: concat!($action, "失败喵，请通过日志查看错误信息喵。")]).into());
             }
         }
     };
@@ -70,7 +74,9 @@ async fn mute(ctx: Ctx<Message<H>>, mut channel: Channel) -> Option<SendMessage>
     let (id, duration) = match params {
         Ok(ok) => ok,
         Err(ParseErr::InvalidNumber) => return Some(msg!(H[text: "无效的数字喵"]).into()),
-        Err(ParseErr::NotEnoughParams) => return Some(msg!(H[text: "需要俩参数喵, 用户ID和时间喵"]).into()),
+        Err(ParseErr::NotEnoughParams) => {
+            return Some(msg!(H[text: "需要俩参数喵, 用户ID和时间喵"]).into());
+        }
         Err(ParseErr::NotMatch) => return None,
     };
 
@@ -79,22 +85,15 @@ async fn mute(ctx: Ctx<Message<H>>, mut channel: Channel) -> Option<SendMessage>
     }
 
     let is_unmute = duration.is_zero();
+    let duration_secs = duration.as_secs();
 
     id.clone_into(&mut channel.id);
 
     let set_mute = SetMute { channel, duration };
     let res = ctx.post(set_mute);
-    let res = tap_err!(
-        res,
-        "Failed to mute channel: {:?}",
-        "禁言失败喵，请通过日志查看错误信息喵。"
-    )
-    .await;
-    tap_err!(
-        res,
-        "Failed to mute channel: {:?}",
-        "禁言失败喵，请通过日志查看错误信息喵。"
-    );
+    let res = tap_err!(res, "禁言").await;
+    tap_err!(res, "禁言");
+    log::info!("mute user {id} for {duration_secs} seconds");
     Some(
         msg!(H [
             text: if is_unmute {"解禁成功喵"} else {"禁言成功喵"}
@@ -138,7 +137,10 @@ enum ParseErr {
 }
 
 impl From<ParseIntError> for ParseErr {
-    fn from(_: ParseIntError) -> Self {
-        Self::InvalidNumber
+    fn from(e: ParseIntError) -> Self {
+        match e.kind() {
+            IntErrorKind::Empty => Self::NotEnoughParams,
+            _ => Self::InvalidNumber,
+        }
     }
 }
