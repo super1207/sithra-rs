@@ -60,7 +60,7 @@ async fn main() {
         client,
     };
     let plugin = plugin.map(move |r| r.route_typed(Message::on(mute)).with_state(state));
-    log::info!("Echo plugin started");
+    log::info!("Management Tools plugin started");
     tokio::select! {
         _ = plugin.run().join_all() => {}
         _ = tokio::signal::ctrl_c() => {}
