@@ -1,9 +1,11 @@
+use std::path::PathBuf;
+
 use ahash::HashMap;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 pub struct Config {
-    pub raw:    String,
+    pub raw: String,
     pub config: HashMap<String, BaseConfig>,
 }
 
@@ -12,7 +14,10 @@ pub struct Config {
 /// * `ReadError` - Failed to read config file
 /// * `ParseError` - Failed to parse config file
 pub fn load_config() -> Result<Config, LoadConfigError> {
-    let config_file = std::fs::read_to_string("config.toml")?;
+    let curexedir = std::env::current_exe()?
+        .parent().unwrap().to_owned();
+    let config_path = curexedir.join("config.toml");
+    let config_file = std::fs::read_to_string(&config_path)?;
     let config: HashMap<String, BaseConfig> = toml::from_str(&config_file)?;
 
     Ok(Config {
@@ -31,7 +36,7 @@ pub enum LoadConfigError {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct BaseConfig {
-    pub path:   String,
+    pub path: PathBuf,
     #[serde(default)]
     pub args:   Vec<String>,
     pub config: Option<toml::Value>,

@@ -40,7 +40,18 @@ impl Loader {
             log::info!("Loading {name}");
             let broadcast_tx = self.broadcast_tx.clone();
             let broadcast_rx = broadcast_tx.subscribe();
-            let peer = run(&config.path, &config.args);
+            
+            let config_path = if config.path.is_relative() {
+                std::env::current_exe()
+                    .expect("Failed to get current executable path")
+                    .parent()
+                    .expect("Failed to get parent directory")
+                    .join(&config.path)
+            } else {
+                config.path.clone()
+            };
+    
+            let peer = run(config_path, &config.args);
             let peer = match peer {
                 Ok(peer) => peer,
                 Err(err) => {
