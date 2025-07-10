@@ -6,7 +6,7 @@ async fn main() {
     let (plugin, ()) = Plugin::new().await.unwrap();
     let plugin = plugin.map(|r| {
         router! { r =>
-            Message[
+            Message [
                 skin::mcbody,
                 skin::mcface,
                 skin::mchead,

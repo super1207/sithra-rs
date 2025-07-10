@@ -1,5 +1,8 @@
 use std::{
-    convert::Infallible, fmt::Display, pin::Pin, task::{Context, Poll}
+    convert::Infallible,
+    fmt::Display,
+    pin::Pin,
+    task::{Context, Poll},
 };
 
 use futures_util::ready;

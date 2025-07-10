@@ -160,7 +160,6 @@ where
 
 pub mod event {
     use sithra_server::typed;
-    pub const PATH: &str = "/event/message.created";
 
     use super::Message;
     typed!("/event/message.created" => impl Message);

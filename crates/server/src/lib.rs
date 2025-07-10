@@ -58,7 +58,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::{fmt::Display, sync::atomic::{AtomicUsize, Ordering}};
+    use std::{
+        fmt::Display,
+        sync::atomic::{AtomicUsize, Ordering},
+    };
 
     use sithra_transport::datapack::RequestDataPack;
     use tokio::sync::Mutex;

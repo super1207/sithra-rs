@@ -23,7 +23,8 @@ pub fn send_req<T: Serialize>(
     let req = match req {
         Err(se_err) => {
             log::error!("Failed to serialize {err} request: {se_err}");
-            let mut response = Response::error(format!("Failed to serialize {err} request: {se_err}"));
+            let mut response =
+                Response::error(format!("Failed to serialize {err} request: {se_err}"));
             response.correlate(id);
             return Some(response);
         }

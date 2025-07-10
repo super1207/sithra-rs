@@ -17,7 +17,9 @@ macro_rules! into_response {
 #[doc(hidden)]
 macro_rules! into_request {
     ($path:expr, $type:ty) => {
-        impl ::std::convert::From<$type> for $crate::__private::sithra_transport::datapack::RequestDataPack {
+        impl ::std::convert::From<$type>
+            for $crate::__private::sithra_transport::datapack::RequestDataPack
+        {
             fn from(value: $type) -> Self {
                 Self::default().path($path).payload(value)
             }

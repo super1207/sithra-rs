@@ -53,7 +53,7 @@ impl RawEvent {
             PostType::Message(message_event) => {
                 let message: Message = message_event.into();
                 let req: RequestDataPack = RequestDataPack::default()
-                    .path(sithra_kit::types::message::event::PATH)
+                    .path(Message::path())
                     .channel_opt(channel)
                     .bot_id(bot_id)
                     .payload(message);
