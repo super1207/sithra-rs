@@ -1,5 +1,4 @@
 pub mod response {
-    use crate::util::de_str_from_num;
     use serde::{Deserialize, Serialize};
     use sithra_kit::{
         transport::datapack::DataPack,
@@ -7,9 +6,13 @@ pub mod response {
     };
     use ulid::Ulid;
 
+    use crate::util::de_str_from_num;
+
     #[derive(Debug, Clone, Deserialize, Serialize)]
     pub struct ApiResponse {
         retcode: i32,
+        #[serde(default)]
+        status:  String,
         echo:    Ulid,
         data:    Option<ApiResponseKind>,
     }
@@ -19,14 +22,17 @@ pub mod response {
         pub fn into_rep(self, bot_id: &str) -> DataPack {
             let Self {
                 retcode,
+                status,
                 echo,
                 data,
             } = self;
+            if retcode >= 400 {
+                return DataPack::builder().correlate(echo).bot_id(bot_id).build_with_error(
+                    format!("Call OneBot API Error, RETCODE: {retcode}, STATUS: {status}"),
+                );
+            }
             let Some(data) = data else {
-                return DataPack::builder()
-                    .correlate(echo)
-                    .bot_id(bot_id)
-                    .build_with_error(&format!("Call OneBot API Error, RETCODE: {retcode}"));
+                return DataPack::builder().correlate(echo).bot_id(bot_id).build_with_payload(());
             };
             match data {
                 ApiResponseKind::SendMessage(send_msg) => {
@@ -54,11 +60,10 @@ pub mod response {
 }
 
 pub mod request {
-    use serde::{Deserialize, Serialize};
-    use sithra_kit::types::smallvec::SmallVec;
-    use ulid::Ulid;
+    use std::fmt::Display;
 
-    use crate::message::internal::InternalOneBotSegment;
+    use serde::{Deserialize, Serialize};
+    use ulid::Ulid;
 
     #[derive(Debug, Clone, Deserialize, Serialize)]
     pub struct ApiCall<T> {
@@ -68,26 +73,12 @@ pub mod request {
     }
 
     impl<T> ApiCall<T> {
-        pub fn new(action: &impl ToString, params: T, echo: Ulid) -> Self {
+        pub fn new(action: impl Display, params: T, echo: Ulid) -> Self {
             Self {
                 action: action.to_string(),
                 params,
                 echo,
             }
         }
-    }
-
-    #[derive(Debug, Clone, Deserialize, Serialize)]
-    pub struct SendMessage {
-        #[serde(flatten)]
-        pub message_type: SendMessageKind,
-        pub message:      SmallVec<[InternalOneBotSegment; 1]>,
-    }
-
-    #[derive(Debug, Clone, Deserialize, Serialize)]
-    #[serde(rename_all = "snake_case", tag = "message_type")]
-    pub enum SendMessageKind {
-        Private { user_id: String },
-        Group { group_id: String },
     }
 }

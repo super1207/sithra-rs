@@ -2,10 +2,9 @@ use std::process;
 
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use sithra_adapter_onebot::{
-    OneBotMessage,
-    api::request::{ApiCall, SendMessage as OneBotSendMessage, SendMessageKind},
-    message::OneBotSegment,
+    AdapterState, OneBotMessage, api::request::ApiCall, message::OneBotSegment, util::send_req,
 };
 use sithra_kit::{
     layers::BotId,
@@ -15,17 +14,15 @@ use sithra_kit::{
         response::Response,
     },
     transport::channel::Channel,
-    types::message::SendMessage,
+    types::{
+        channel::SetMute,
+        message::{Segments, SendMessage},
+    },
 };
 use tokio::sync::mpsc;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message as WsMessage};
 
 // type Context<T> = RawContext<T, AdapterState>;
-
-#[derive(Clone)]
-struct AdapterState {
-    ws_tx: mpsc::UnboundedSender<WsMessage>,
-}
 
 #[derive(Clone, Deserialize, Serialize)]
 struct Config {
@@ -86,7 +83,8 @@ async fn main() {
 
     let plugin = plugin.map(|r| {
         r.route_typed(SendMessage::on(send_message))
-            .layer(BotId::new(&bot_id))
+            .route_typed(SetMute::on(set_mute))
+            .layer(BotId::new(bot_id))
             .with_state(state)
     });
 
@@ -106,38 +104,62 @@ async fn send_message(
 ) -> Option<Response> {
     let segments = payload.content.into_iter().filter_map(|s| match OneBotSegment::try_from(s) {
         Ok(segment) => match segment {
-            OneBotSegment::Typed(segment) => Some(segment),
-            OneBotSegment::Unknown(_) => None,
+            OneBotSegment(segment) => Some(segment),
         },
         Err(_err) => None,
     });
-    let params = if let Some(group_id) = channel.parent_id {
-        OneBotSendMessage {
-            message_type: SendMessageKind::Group { group_id },
-            message:      segments.collect(),
-        }
+    let req = if let Some(group_id) = channel.parent_id {
+        ApiCall::new(
+            "send_msg",
+            json!({
+                "message_type": "group",
+                "group_id": group_id,
+                "message": segments.collect::<Segments<_>>()
+            }),
+            id,
+        )
     } else {
-        OneBotSendMessage {
-            message_type: SendMessageKind::Private {
-                user_id: channel.id,
-            },
-            message:      segments.collect(),
-        }
+        ApiCall::new(
+            "send_msg",
+            json!({
+                "message_type": "private",
+                "user_id": channel.id,
+                "message": segments.collect::<Segments<_>>()
+            }),
+            id,
+        )
     };
-    let req = ApiCall::new(&"send_msg", params, id);
-    let req = serde_json::to_string(&req);
-    let Ok(req) = req else {
-        log::error!("Failed to serialize send_msg request");
-        let mut response = Response::error(&"Failed to serialize send_msg request");
+    send_req(&state, id, &req, "send_msg")
+}
+
+async fn set_mute(
+    Payload(payload): Payload<SetMute>,
+    State(state): State<AdapterState>,
+    Correlation(id): Correlation,
+) -> Option<Response> {
+    let SetMute { channel, duration } = payload;
+    let Channel {
+        id: user_id,
+        ty: _,
+        name: _,
+        parent_id,
+        self_id: _,
+    } = channel;
+    let Some(parent_id) = parent_id else {
+        log::error!("Set Mute Failed to get parent_id");
+        let mut response = Response::error("Failed to get parent_id");
         response.correlate(id);
         return Some(response);
     };
-    let result = state.ws_tx.send(WsMessage::Text(req.into()));
-    if let Err(err) = result {
-        log::error!("Failed to send send_msg request: {err}");
-        let mut response = Response::error(&"Failed to send send_msg request");
-        response.correlate(id);
-        return Some(response);
-    }
-    None
+    let duration = duration.as_secs();
+    let req = ApiCall::new(
+        "set_group_ban",
+        json!({
+            "group_id": parent_id,
+            "user_id": user_id,
+            "duration": duration
+        }),
+        id,
+    );
+    send_req(&state, id, &req, "set_mute")
 }

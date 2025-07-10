@@ -157,7 +157,7 @@ fn split_peer(
 
 fn init_datapack(conf: rmpv::Value) -> DataPack {
     let init = Initialize::new(conf);
-    DataPack::builder().payload(init).path(&"/initialize").build()
+    DataPack::builder().payload(init).path("/initialize").build()
 }
 
 fn map_log(data: DataPack) -> Option<DataPack> {

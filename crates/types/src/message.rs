@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use serde::{Deserialize, Serialize};
 use sithra_server::{
     extract::context::{Clientful, Context},
@@ -8,6 +10,8 @@ use smallvec::SmallVec;
 use typeshare::typeshare;
 
 pub const NIL: rmpv::Value = rmpv::Value::Nil;
+
+pub type Segments<Seg> = SmallVec<[Seg; 1]>;
 
 #[typeshare]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -27,25 +31,25 @@ pub struct Segment {
 }
 
 impl Segment {
-    pub fn text<T: ToString>(content: &T) -> Self {
+    pub fn text<T: Display>(content: T) -> Self {
         Self {
             ty:   "text".to_owned(),
             data: content.to_string().into(),
         }
     }
 
-    pub fn image<T: ToString>(url: &T) -> Self {
+    pub fn image<T: Display>(url: T) -> Self {
         Self {
             ty:   "image".to_owned(),
             data: url.to_string().into(),
         }
     }
 
-    pub fn img<T: ToString>(url: &T) -> Self {
+    pub fn img<T: Display>(url: T) -> Self {
         Self::image(url)
     }
 
-    pub fn at<T: ToString>(target: &T) -> Self {
+    pub fn at<T: Display>(target: T) -> Self {
         Self {
             ty:   "at".to_owned(),
             data: target.to_string().into(),
@@ -53,7 +57,7 @@ impl Segment {
     }
 
     /// # Errors
-    pub fn custom<T: ToString, V: Serialize>(ty: &T, data: V) -> Result<Self, rmpv::ext::Error> {
+    pub fn custom<T: Display, V: Serialize>(ty: T, data: V) -> Result<Self, rmpv::ext::Error> {
         Ok(Self {
             ty:   ty.to_string(),
             data: rmpv::ext::to_value(data)?,
@@ -163,16 +167,23 @@ pub mod event {
 }
 
 pub mod command {
-    use sithra_server::typed;
+    use sithra_server::{traits::TypedRequest, typed};
 
     use super::SendMessage;
-    use crate::into_response;
+    use crate::{into_request, into_response, message::Message};
     typed!("/command/message.create" => impl SendMessage);
 
+    impl TypedRequest for SendMessage {
+        type Response = Message;
+    }
+
     into_response!("/command/message.create", SendMessage);
+    into_request!("/command/message.create", SendMessage);
 }
 
 pub mod common {
+    use std::fmt::Display;
+
     use de::Error as _;
     use serde::{Deserialize, Serialize, de};
 
@@ -187,19 +198,19 @@ pub mod common {
     }
 
     impl CommonSegment {
-        pub fn text<T: ToString>(content: &T) -> Self {
+        pub fn text<T: Display>(content: T) -> Self {
             Self::Text(content.to_string())
         }
 
-        pub fn image<T: ToString>(url: &T) -> Self {
+        pub fn image<T: Display>(url: T) -> Self {
             Self::Image(url.to_string())
         }
 
-        pub fn img<T: ToString>(url: &T) -> Self {
+        pub fn img<T: Display>(url: T) -> Self {
             Self::image(url)
         }
 
-        pub fn at<T: ToString>(target: &T) -> Self {
+        pub fn at<T: Display>(target: T) -> Self {
             Self::At(target.to_string())
         }
     }
@@ -298,8 +309,8 @@ mod tests {
             .send_message(
                 channel,
                 msg!(CommonSegment[
-                    text: &"Hello, world!",
-                    img: &"https://example.com/image.png"
+                    text: "Hello, world!",
+                    img: "https://example.com/image.png"
                 ]),
             )
             .await?;
@@ -308,8 +319,8 @@ mod tests {
 
     async fn on_message3(Payload(_msg): Payload<Message>) -> SendMessage {
         msg!(CommonSegment[
-            text: &"Hello, world!",
-            img: &"https://example.com/image.png"
+            text: "Hello, world!",
+            img: "https://example.com/image.png"
         ])
         .into()
     }

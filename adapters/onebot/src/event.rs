@@ -93,7 +93,7 @@ impl From<MessageEvent> for Message {
             content: value
                 .message
                 .into_iter()
-                .filter_map(|segment| OneBotSegment::Typed(segment).try_into().ok())
+                .filter_map(|segment| OneBotSegment(segment).try_into().ok())
                 .collect(),
         }
     }
