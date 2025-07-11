@@ -1,8 +1,10 @@
-use std::process;
+use std::str::FromStr;
+use std::{collections::BTreeMap, process};
 use std::time::Duration;
 use std::pin::Pin;
 
 use futures_util::{SinkExt, StreamExt};
+use hyper::header::HeaderValue;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sithra_adapter_onebot::{
@@ -23,6 +25,7 @@ use sithra_kit::{
 };
 use tokio::sync::mpsc;
 use tokio::time::{interval, sleep, Sleep};
+use tokio_tungstenite::tungstenite;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message as WsMessage};
 use ulid::Ulid; 
 
@@ -30,6 +33,39 @@ use ulid::Ulid;
 struct Config {
     #[serde(rename = "ws-url")]
     ws_url: String,
+}
+
+
+
+pub fn get_params_from_uri(uri:&hyper::Uri) -> BTreeMap<String,String> {
+    let mut ret_map = BTreeMap::new();
+    if uri.query().is_none() {
+        return ret_map;
+    }
+    let query_str = uri.query().unwrap();
+    let query_vec = query_str.split("&");
+    for it in query_vec {
+        if it == "" {
+            continue;
+        }
+        let index_opt = it.find("=");
+        if index_opt.is_some() {
+            let k_rst: String = url::form_urlencoded::parse(it.get(0..index_opt.unwrap()).unwrap().as_bytes())
+                .map(|(key, val)| [key, val].concat())
+                .collect::<String>();
+            let v_rst: String = url::form_urlencoded::parse(it.get(index_opt.unwrap() + 1..).unwrap().as_bytes())
+                .map(|(key, val)| [key, val].concat())
+                .collect::<String>();
+            ret_map.insert(k_rst, v_rst);
+        }
+        else {
+            let k_rst: String = url::form_urlencoded::parse(it.as_bytes())
+                .map(|(key, val)| [key, val].concat())
+                .collect::<String>();
+            ret_map.insert(k_rst,"".to_owned());
+        }
+    }
+    ret_map
 }
 
 #[tokio::main]
@@ -43,13 +79,20 @@ async fn main() {
     let bot_id_ = bot_id.clone();
     let config_ = config.clone();
 
+    let mp = get_params_from_uri(&hyper::Uri::from_str(&config_.ws_url).expect("Parse URI failed"));
+    use tungstenite::client::IntoClientRequest;
+    let url = url::Url::parse(&config_.ws_url).expect("Parse WebSocket URL failed");
+    let mut request = url.as_str().into_client_request().expect("Create WebSocket request failed");
+    if let Some(access_token) = mp.get("access_token") {
+        request.headers_mut().insert("Authorization", HeaderValue::from_str(&format!("Bearer {}", access_token)).unwrap());
+    }
+    // log::info!("request: {:?}", request);
     let connection_manager = tokio::spawn(async move {
         let mut ws_rx = ws_rx; 
 
         'reconnect: loop {
             log::info!("Attempting to connect to WebSocket: {}", &config_.ws_url);
-            
-            let ws_stream = match connect_async(&config_.ws_url).await {
+            let ws_stream = match connect_async(request.clone()).await {
                 Ok((stream, _)) => {
                     log::info!("WebSocket connected successfully.");
                     stream
