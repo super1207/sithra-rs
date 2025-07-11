@@ -1,4 +1,6 @@
 use std::process;
+use std::time::Duration;
+use std::pin::Pin;
 
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
@@ -20,9 +22,9 @@ use sithra_kit::{
     },
 };
 use tokio::sync::mpsc;
+use tokio::time::{interval, sleep, Sleep};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message as WsMessage};
-
-// type Context<T> = RawContext<T, AdapterState>;
+use ulid::Ulid; 
 
 #[derive(Clone, Deserialize, Serialize)]
 struct Config {
@@ -34,48 +36,125 @@ struct Config {
 async fn main() {
     let (plugin, config) = Plugin::<Config>::new().await.expect("Init plugin failed");
 
-    let (ws_stream, _) = connect_async(&config.ws_url).await.unwrap();
-    let (mut ws_write, mut ws_read) = ws_stream.split();
-    let (ws_tx, mut ws_rx) = mpsc::unbounded_channel::<WsMessage>();
-    let send_loop = tokio::spawn(async move {
-        while let Some(msg) = ws_rx.recv().await {
-            ws_write.send(msg).await.expect("Send message to channel Error");
-        }
-    });
-
+    let (ws_tx, ws_rx) = mpsc::unbounded_channel::<WsMessage>();
     let bot_id = format!("{}-{}", "onebot", process::id());
-
     let client = plugin.server.client();
     let sink = client.sink();
     let bot_id_ = bot_id.clone();
-    let recv_loop = tokio::spawn(async move {
-        while let Some(message) = ws_read.next().await {
-            let message = message.expect("Recv message from ws Error");
-            let message = match message.into_text() {
-                Ok(message) => message,
-                Err(err) => {
-                    log::error!("Recv message from ws Error: {err}");
-                    continue;
+    let config_ = config.clone();
+
+    let connection_manager = tokio::spawn(async move {
+        let mut ws_rx = ws_rx; 
+
+        'reconnect: loop {
+            log::info!("Attempting to connect to WebSocket: {}", &config_.ws_url);
+            
+            let ws_stream = match connect_async(&config_.ws_url).await {
+                Ok((stream, _)) => {
+                    log::info!("WebSocket connected successfully.");
+                    stream
+                }
+                Err(e) => {
+                    log::error!("Failed to connect to WebSocket: {}. Retrying in 5 seconds...", e);
+                    sleep(Duration::from_secs(5)).await;
+                    continue 'reconnect;
                 }
             };
-            if message.is_empty() {
-                continue;
+
+            let (mut ws_write, mut ws_read) = ws_stream.split();
+            let bot_id_ = bot_id_.clone();
+            
+            let mut heartbeat_interval = interval(Duration::from_secs(30));
+            let mut timeout_sleep: Option<Pin<Box<Sleep>>> = None;
+            let mut last_heartbeat_echo: Option<Ulid> = None;
+
+            loop {
+                tokio::select! {
+                    _ = async { timeout_sleep.as_mut().unwrap().await }, if timeout_sleep.is_some() => {
+                        log::error!("Heartbeat timeout. No response received in 5 seconds. Reconnecting...");
+                        timeout_sleep.take();
+                        break;
+                    }
+
+                    _ = heartbeat_interval.tick() => {
+                        let echo = Ulid::new();
+                        let heartbeat_req = ApiCall::new(
+                            "get_version_info",
+                            json!({}),
+                            echo,
+                        );
+                        let msg = WsMessage::Text(serde_json::to_string(&heartbeat_req).unwrap().into());
+                        
+                        log::debug!("Sending heartbeat with echo: {}", &echo);
+                        if let Err(e) = ws_write.send(msg).await {
+                            log::error!("Failed to send heartbeat: {}. Connection lost.", e);
+                            break;
+                        }
+                        
+                        last_heartbeat_echo = Some(echo);
+                        timeout_sleep = Some(Box::pin(sleep(Duration::from_secs(5))));
+                    }
+
+                    Some(msg) = ws_rx.recv() => {
+                        if let Err(e) = ws_write.send(msg).await {
+                            log::error!("Send message to WebSocket failed: {}. Connection lost.", e);
+                            break;
+                        }
+                    },
+                    Some(message) = ws_read.next() => {
+                        let message = match message {
+                            Ok(message) => message,
+                            Err(e) => {
+                                log::error!("Recv message from WebSocket failed: {}. Connection lost.", e);
+                                break;
+                            }
+                        };
+                        
+                        if let Some(echo_to_check) = &last_heartbeat_echo {
+                             if let Ok(text) = message.to_text() {
+                                 if text.contains(&echo_to_check.to_string()) {
+                                     log::debug!("Heartbeat ACK received for echo: {}", echo_to_check);
+                                     timeout_sleep = None;
+                                     last_heartbeat_echo = None;
+                                     continue;
+                                 }
+                             }
+                        }
+
+                        let message = match message.into_text() {
+                            Ok(message) => message,
+                            Err(err) => {
+                                log::error!("Recv message from ws Error: {err}");
+                                continue;
+                            }
+                        };
+                        if message.is_empty() {
+                            continue;
+                        }
+                        let message = match serde_json::from_str::<OneBotMessage>(&message) {
+                            Ok(message) => message,
+                            Err(err) => {
+                                log::error!("Parse message from ws Error: {err}\traw: {message:?}");
+                                continue;
+                            }
+                        };
+                        let message = match message {
+                            OneBotMessage::Api(api) => Some(api.into_rep(&bot_id_)),
+                            OneBotMessage::Event(event) => event.into_req(&bot_id_),
+                        };
+                        if let Some(message) = message {
+                            if let Err(e) = sink.send(message) {
+                                log::error!("Failed to send message to Sithra core: {}", e);
+                            }
+                        }
+                    },
+                    else => {
+                        break;
+                    }
+                }
             }
-            let message = match serde_json::from_str::<OneBotMessage>(&message) {
-                Ok(message) => message,
-                Err(err) => {
-                    log::error!("Parse message from ws Error: {err}\traw: {message:?}");
-                    continue;
-                }
-            };
-            let message = match message {
-                OneBotMessage::Api(api) => Some(api.into_rep(&bot_id_)),
-                OneBotMessage::Event(event) => event.into_req(&bot_id_),
-            };
-            let Some(message) = message else {
-                continue;
-            };
-            sink.send(message).unwrap();
+            log::warn!("WebSocket connection lost. Reconnecting in 5 seconds...");
+            sleep(Duration::from_secs(5)).await;
         }
     });
 
@@ -89,10 +168,15 @@ async fn main() {
     });
 
     tokio::select! {
-        _ = send_loop => {}
-        _ = recv_loop => {}
-        _ = plugin.run().join_all() => {}
-        _ = tokio::signal::ctrl_c() => {}
+        _ = connection_manager => {
+            log::error!("Connection manager task exited unexpectedly.");
+        }
+        _ = plugin.run().join_all() => {
+             log::info!("Sithra plugin server exited.");
+        }
+        _ = tokio::signal::ctrl_c() => {
+            log::info!("Ctrl-C received, shutting down.");
+        }
     }
 }
 
