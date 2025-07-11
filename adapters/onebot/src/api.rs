@@ -42,6 +42,9 @@ pub mod response {
                     };
                     DataPack::builder().correlate(echo).build_with_payload(payload)
                 }
+                ApiResponseKind::Other(_value) => {
+                    DataPack::default()
+                }
             }
         }
     }
@@ -50,6 +53,7 @@ pub mod response {
     #[serde(untagged)]
     pub enum ApiResponseKind {
         SendMessage(SendMessageResponse),
+        Other(serde_json::Value), 
     }
 
     #[derive(Debug, Clone, Deserialize, Serialize)]

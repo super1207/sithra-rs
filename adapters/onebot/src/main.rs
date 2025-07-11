@@ -90,10 +90,29 @@ async fn handle_connection(
         let mut ws_rx = ws_rx.lock().await;
         let mut ws_write = ws_write;
 
-        while let Some(msg) = ws_rx.recv().await {
-            if let Err(e) = ws_write.send(msg).await {
-                log::error!("Failed to send message to WebSocket: {e}");
-                break;
+        loop {
+            tokio::select! {
+                maybe_msg  = ws_rx.recv() => {
+                    if let Some(msg) = maybe_msg {
+                        if let Err(e) = ws_write.send(msg).await {
+                            log::error!("Failed to send message to WebSocket: {e}");
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                },
+                _ = tokio::time::sleep(std::time::Duration::from_secs(15)) => {
+                    let to_send = serde_json::json!({
+                        "action":"get_version_info",
+                        "params":{},
+                        "echo":ulid::Ulid::nil(),
+                    }).to_string();
+                    if let Err(e) = ws_write.send(WsMessage::Text(to_send.into())).await {
+                        log::error!("Failed to send heartbeat to WebSocket: {e}");
+                        break;
+                    }
+                }
             }
         }
     });
@@ -110,23 +129,35 @@ async fn recv_loop<S>(mut ws_read: S, bot_id: &str, sink: &ClientSink)
 where
     S: StreamExt<Item = Result<WsMessage, tokio_tungstenite::tungstenite::Error>> + Unpin,
 {
-    while let Some(message) = ws_read.next().await {
-        let message = match message {
-            Ok(msg) => msg,
-            Err(e) => {
-                log::error!("WebSocket receive error: {e}");
-                break;
-            }
-        };
 
-        let message = onebot_adaptation(message, bot_id);
-        if let Some(message) = message {
-            if let Err(e) = sink.send(message) {
-                log::error!("Failed to send message to sink: {e}");
+    loop {
+        tokio::select! {
+            maybe_msg = ws_read.next() => {
+                if let Some(message) = maybe_msg {
+                    let message = match message {
+                        Ok(msg) => msg,
+                        Err(e) => {
+                            log::error!("WebSocket receive error: {e}");
+                            break;
+                        }
+                    };
+
+                    let message = onebot_adaptation(message, bot_id);
+                    if let Some(message) = message {
+                        if let Err(e) = sink.send(message) {
+                            log::error!("Failed to send message to sink: {e}");
+                        }
+                    }                 
+                } else {
+                    break;
+                }
+            },
+            _ = tokio::time::sleep(std::time::Duration::from_secs(20)) => {
+                log::error!("WebSocket heartbeat timeout");
+                break;
             }
         }
     }
-
     log::warn!("WebSocket receive loop ended");
 }
 
